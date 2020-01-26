@@ -78,7 +78,7 @@ def main( args ):
 
 	# The CartPole-v1 environment from OpenAI Gym
 	agent = Agent(gym.make('CartPole-v0'))
-	logger = SummaryWriter('exp/reinf')
+	logger = SummaryWriter(f'exp/{args.tag}')
 
 	# average episodic reward
 	avg_ep_reward = 0
@@ -121,6 +121,7 @@ if __name__ == '__main__':
 	parser.add_argument('--gamma', type=float, required=False, default=0.99, help='Discount factor')
 	parser.add_argument('--render', action='store_true', help='Render environment')
 	parser.add_argument('--interval', type=int, required=False, default=25, help='Logging freq')
+    parser.add_argument('--tag', type=str, required=True, help='Identifier for experiment')
 
 	args = parser.parse_args()
 	main( args )
