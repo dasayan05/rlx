@@ -3,22 +3,7 @@ import torch.nn.functional as F
 from torch.distributions import Categorical
 from torch.utils.tensorboard import SummaryWriter
 
-class PolicyNetwork(torch.nn.Module):
-	def __init__(self, n_states, n_actions, n_affine = 128):
-		super().__init__()
-
-		# Track arguments for further use
-		self.n_states = n_states
-		self.n_actions = n_actions
-		self.n_affine = n_affine
-
-		# Layer definitions
-		self.affine = torch.nn.Linear(self.n_states, self.n_affine)
-		self.pi = torch.nn.Linear(self.n_affine, self.n_actions)
-	
-	def forward(self, x):
-		x = F.relu(self.affine(x))
-		return F.softmax(self.pi(x), dim=-1)
+from models import PolicyNetwork
 
 class Agent(object):
 	def __init__(self, env):
@@ -31,9 +16,7 @@ class Agent(object):
 
 		# Internal objects
 		self.policynet = PolicyNetwork(self.n_states, self.n_actions)
-		# self.valuenet = ValueNetwork(self.n_states)
 		self.policyoptim = torch.optim.Adam(self.policynet.parameters())
-		# self.valueoptim = torch.optim.Adam(self.valuenet.parameters())
 
 	def reset(self):
 		self.state = torch.from_numpy(self.environment.reset()).float()
@@ -41,7 +24,6 @@ class Agent(object):
 
 	def take_action(self):
 		actions = Categorical(self.policynet(self.state))
-		# value = self.valuenet(self.state)
 
 		# sample an action
 		action = actions.sample()
@@ -52,7 +34,6 @@ class Agent(object):
 
 		self.logprobs.append(actions.log_prob(action))
 		self.rewards.append(rw)
-		# self.values.append(value)
 
 		return rw, done
 
@@ -69,14 +50,13 @@ class Agent(object):
 		self.policylosses = []
 		for ret, lp in zip(self.returns, self.logprobs):
 			self.policylosses.append(- ret * lp)
-			# self.valuelosses.append(F.smooth_l1_loss(val, torch.tensor([ret])))
 
-		return sum(self.policylosses) #, sum(self.valuelosses)
+		return sum(self.policylosses)
 
 def main( args ):
 	from itertools import count
 
-	# The CartPole-v1 environment from OpenAI Gym
+	# The CartPole-v0 environment from OpenAI Gym
 	agent = Agent(gym.make('CartPole-v0'))
 	logger = SummaryWriter(f'exp/{args.tag}')
 
@@ -98,11 +78,10 @@ def main( args ):
 			if done:
 				break
 
-		avg_ep_reward = ((avg_ep_reward * (episode-1)) + ep_reward) / episode
+		avg_ep_reward = 0.05 * ep_reward + (1 - 0.05) * avg_ep_reward
 
 		# Training section
 		agent.policyoptim.zero_grad()
-		# agent.valueoptim.zero_grad()
 
 		loss = agent.compute_loss()
 
@@ -120,8 +99,8 @@ if __name__ == '__main__':
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--gamma', type=float, required=False, default=0.99, help='Discount factor')
 	parser.add_argument('--render', action='store_true', help='Render environment')
-	parser.add_argument('--interval', type=int, required=False, default=25, help='Logging freq')
-    parser.add_argument('--tag', type=str, required=True, help='Identifier for experiment')
+	parser.add_argument('--tag', type=str, required=True, help='Identifier for experiment')
+	parser.add_argument('--interval', type=int, required=False, default=10, help='Logging freq')
 
 	args = parser.parse_args()
 	main( args )
