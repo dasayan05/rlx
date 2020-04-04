@@ -35,7 +35,7 @@ class Agent(object):
         st, rw, done, _ = self.environment.step(action.item())
         self.state = torch.from_numpy(st).float() # update current state
 
-        self.logprobs.append(actions.log_prob(action))
+        self.logprobs.append(actions.log_prob(action).view(1,))
         self.rewards.append(rw)
         self.values.append(value)
 
@@ -46,36 +46,34 @@ class Agent(object):
         for r in reversed(self.rewards[:-1]):
             self.returns.insert(0, r + args.gamma * self.returns[0])
 
-        self.returns = torch.tensor(self.returns)
-        self.returns = (self.returns - self.returns.mean()) / self.returns.std()
-
     def compute_loss(self):
         self.__compute_returns()
-        self.policylosses, self.valuelosses = [], []
-        for val, ret, lp in zip(self.values, self.returns, self.logprobs):
-            advantage = ret - val.detach()
-            self.policylosses.append(- advantage * lp)
-            self.valuelosses.append(self.mseloss(val, ret.view(1,)))
+        self.returns = torch.tensor(self.returns)
+        self.returns = (self.returns - self.returns.mean()) / self.returns.std()
+        self.values = torch.cat(self.values, 0)
+        self.logprobs = torch.cat(self.logprobs, 0)
+        
+        advantage = self.returns - self.values.detach()
+        policyloss = - advantage * self.logprobs
+        valueloss = 0.5 * advantage.pow(2)
 
-        return sum(self.policylosses), sum(self.valuelosses)
+        return policyloss.sum(), valueloss.sum()
 
 def main( args ):
-    from itertools import count
-
     # The CartPole-v0 environment from OpenAI Gym
-    agent = Agent(gym.make('CartPole-v0'))
+    agent = Agent(gym.make(args.env))
     logger = SummaryWriter(f'exp/{args.tag}')
 
     # average episodic reward
-    avg_ep_reward = 0
+    running_reward = 0
 
     # loop for many episodes
-    for episode in count(1):
+    for episode in range(args.max_episode):
         ep_reward = 0
 
         agent.reset() # prepares for a new episode
         # loop for many time-steps
-        for t in count(1):
+        for t in range(1000):
             if args.render and episode % args.interval == 0:
                 agent.environment.render()
             
@@ -84,21 +82,18 @@ def main( args ):
             if done:
                 break
         
-        avg_ep_reward = 0.05 * ep_reward + (1 - 0.05) * avg_ep_reward
+        running_reward = 0.05 * ep_reward + (1 - 0.05) * running_reward
 
         # Training section
         agent.pvoptim.zero_grad()
-
         ploss, vloss = agent.compute_loss()
         loss = ploss + vloss
-
         loss.backward()
-
         agent.pvoptim.step()
 
         if episode % args.interval == 0:
-            print(f'Average reward till this episode: {avg_ep_reward}')
-            logger.add_scalar('avg_reward', avg_ep_reward, global_step=episode)
+            print(f'Running reward at episode {episode}: {running_reward}')
+            logger.add_scalar('avg_reward', running_reward, global_step=episode)
 
 if __name__ == '__main__':
     import argparse
@@ -107,6 +102,8 @@ if __name__ == '__main__':
     parser.add_argument('--render', action='store_true', help='Render environment')
     parser.add_argument('--interval', type=int, required=False, default=10, help='Logging freq')
     parser.add_argument('--tag', type=str, required=True, help='Identifier for experiment')
+    parser.add_argument('--max_episode', type=int, required=False, default=5000, help='Maximum no. of episodes')
+    parser.add_argument('--env', type=str, required=True, help='Gym environment')
 
     args = parser.parse_args()
     main( args )
