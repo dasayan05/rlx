@@ -14,12 +14,15 @@ class Agent(object):
 		self.n_states = env.observation_space.shape[0]
 		self.n_actions = env.action_space.n
 
+		# Device
+		self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+
 		# Internal objects
-		self.policynet = PolicyNetwork(self.n_states, self.n_actions)
+		self.policynet = PolicyNetwork(self.n_states, self.n_actions).to(self.device)
 		self.policyoptim = torch.optim.Adam(self.policynet.parameters())
 
 	def reset(self):
-		self.state = torch.from_numpy(self.environment.reset()).float()
+		self.state = torch.from_numpy(self.environment.reset()).float().to(self.device)
 		self.rewards, self.logprobs = [], []
 
 	def take_action(self):
@@ -30,7 +33,7 @@ class Agent(object):
 		
 		# Transition to new state and retrieve a reward
 		st, rw, done, _ = self.environment.step(action.item())
-		self.state = torch.from_numpy(st).float() # update current state
+		self.state = torch.from_numpy(st).float().to(self.device)
 
 		self.logprobs.append(actions.log_prob(action).view(1,))
 		self.rewards.append(rw)
@@ -44,7 +47,7 @@ class Agent(object):
 
 	def compute_loss(self):
 		self.__compute_returns()
-		self.returns = torch.tensor(self.returns)
+		self.returns = torch.tensor(self.returns, device=self.device)
 		self.returns = (self.returns - self.returns.mean()) / self.returns.std()
 		self.logprobs = torch.cat(self.logprobs, 0)
 		
@@ -93,7 +96,7 @@ if __name__ == '__main__':
 	parser.add_argument('--render', action='store_true', help='Render environment')
 	parser.add_argument('--tag', type=str, required=True, help='Identifier for experiment')
 	parser.add_argument('--interval', type=int, required=False, default=10, help='Logging freq')
-	parser.add_argument('--max_episode', type=int, required=False, default=5000, help='Maximum no. of episodes')
+	parser.add_argument('--max_episode', type=int, required=False, default=500, help='Maximum no. of episodes')
 	parser.add_argument('--env', type=str, required=True, help='Gym environment')
 
 	args = parser.parse_args()
