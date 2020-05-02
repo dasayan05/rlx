@@ -64,6 +64,34 @@ class Agent(object):
 
         return policyloss.sum(), valueloss.sum(), sum(self.entropy)
 
+    def episode(self, max_length, **kwargs):
+        ep_reward = 0 # total reward for full episode
+
+        self.reset() # prepares for a new episode
+        # loop for many time-steps
+        for t in range(max_length):
+            if kwargs['render'] and episode % kwargs['interval'] == 0:
+                self.environment.render()
+            
+            r, done = self.take_action()
+            ep_reward += r
+            
+            if done:
+                break
+
+        # One last 'value' is needed for bootstrapping
+        value = self.valuenet(self.state)
+        self.values.append( value )
+
+        return ep_reward
+
+    def train(self):
+        self.pvoptim.zero_grad()
+        ploss, vloss, eloss = self.compute_loss()
+        loss = ploss + vloss - 0.001 * eloss
+        loss.backward()
+        self.pvoptim.step()
+
 def main( args ):
     # The CartPole-v0 environment from OpenAI Gym
     agent = Agent(gym.make(args.env))
@@ -74,33 +102,10 @@ def main( args ):
 
     # loop for many episodes
     for episode in range(args.max_episode):
-        ep_reward = 0
-
-        agent.reset() # prepares for a new episode
-        # loop for many time-steps
-        for t in range(1000):
-            if args.render and episode % args.interval == 0:
-                agent.environment.render()
-            
-            r, done = agent.take_action()
-            ep_reward += r
-            
-            if done:
-                break
-        
-        # One last 'value' is needed for bootstrapping
-        value = agent.valuenet(agent.state)
-        agent.values.append( value )
+        ep_reward = agent.episode(1000, render=args.render, interval=args.interval)
+        agent.train()
         
         running_reward = 0.05 * ep_reward + (1 - 0.05) * running_reward
-
-        # Training section
-        agent.pvoptim.zero_grad()
-        ploss, vloss, eloss = agent.compute_loss()
-        loss = ploss + vloss - 0.001 * eloss
-        loss.backward()
-        agent.pvoptim.step()
-
         if episode % args.interval == 0:
             print(f'Running reward at episode {episode}: {running_reward}')
             logger.add_scalar('avg_reward', running_reward, global_step=episode)
