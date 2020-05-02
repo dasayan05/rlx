@@ -1,52 +1,34 @@
-import torch, gym, numpy as np
-import torch.nn.functional as F
-from torch.distributions import Categorical
+import gym
+import torch
 from torch.utils.tensorboard import SummaryWriter
 
-from models import PolicyNetwork
+from agent import PGAgent
+from policy import DiscreterMLPPolicy
 
-class Agent(object):
-    def __init__(self, env):
-        super().__init__()
+class PGReinforce(PGAgent):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
-        # Track arguments
-        self.environment = env
-        self.n_states = env.observation_space.shape[0]
-        self.n_actions = env.action_space.n
+    def timestep(self, state):
+        action_dist = self.policy(state) # invoke the policy
 
-        # Device
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-
-        # Internal objects
-        self.policynet = PolicyNetwork(self.n_states, self.n_actions).to(self.device)
-        self.policyoptim = torch.optim.Adam(self.policynet.parameters())
-
-    def reset(self):
-        self.state = torch.from_numpy(self.environment.reset()).float().to(self.device)
-        self.rewards, self.logprobs = [], []
-
-    def take_action(self):
-        actions = Categorical(self.policynet(self.state))
-
-        # sample an action
-        action = actions.sample()
+        action = action_dist.sample() # sample an action
         
         # Transition to new state and retrieve a reward
         st, rw, done, _ = self.environment.step(action.item())
-        self.state = torch.from_numpy(st).float().to(self.device)
+        state = torch.from_numpy(st).float().to(self.device) # update current state
 
-        self.logprobs.append(actions.log_prob(action).view(1,))
+        self.logprobs.append(action_dist.log_prob(action).view(1,))
         self.rewards.append(rw)
 
-        return rw, done
+        return state, rw, done
 
-    def __compute_returns(self):
+    def compute_loss(self):
+        # compute return (sum of future rewards)
         self.returns = [self.rewards[-1]]
         for r in reversed(self.rewards[:-1]):
             self.returns.insert(0, r + args.gamma * self.returns[0])
 
-    def compute_loss(self):
-        self.__compute_returns()
         self.returns = torch.tensor(self.returns, device=self.device)
         self.returns = (self.returns - self.returns.mean()) / self.returns.std()
         self.logprobs = torch.cat(self.logprobs, 0)
@@ -54,32 +36,9 @@ class Agent(object):
         policyloss = - self.returns * self.logprobs
         return policyloss.sum()
 
-    def episode(self, max_length, **kwargs):
-        ep_reward = 0 # total reward for full episode
-
-        self.reset() # prepares for a new episode
-        # loop for many time-steps
-        for t in range(max_length):
-            if kwargs['render'] and episode % kwargs['interval'] == 0:
-                self.environment.render()
-            
-            r, done = self.take_action()
-            ep_reward += r
-            
-            if done:
-                break
-
-        return ep_reward
-
-    def train(self):
-        self.policyoptim.zero_grad()
-        loss = self.compute_loss()
-        loss.backward()
-        self.policyoptim.step()
-
 def main( args ):
     # The CartPole-v0 environment from OpenAI Gym
-    agent = Agent(gym.make(args.env))
+    agent = PGReinforce(gym.make(args.env), DiscreterMLPPolicy)
     logger = SummaryWriter(f'exp/{args.tag}')
 
     # average episodic reward
@@ -87,7 +46,7 @@ def main( args ):
 
     # loop for many episodes
     for episode in range(args.max_episode):
-        ep_reward = agent.episode(1000, render=args.render, interval=args.interval)
+        ep_reward, _ = agent.episode(1000, render=args.render, interval=args.interval)
         agent.train()
 
         running_reward = 0.05 * ep_reward + (1 - 0.05) * running_reward
