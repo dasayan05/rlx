@@ -54,7 +54,7 @@ def main( args ):
 
     # loop for many episodes
     for episode in range(args.max_episode):
-        ep_reward, last_state = agent.episode(1000, render=args.render, interval=args.interval)
+        ep_reward, last_state = agent.episode(args.horizon, render=args.render, interval=args.interval)
         # little hack, need to fix the interface
         value = agent.policy.valuenet(last_state); agent.values.append( value )
         agent.train()
@@ -72,6 +72,7 @@ if __name__ == '__main__':
     parser.add_argument('--interval', type=int, required=False, default=10, help='Logging freq')
     parser.add_argument('--tag', type=str, required=True, help='Identifier for experiment')
     parser.add_argument('--max_episode', type=int, required=False, default=500, help='Maximum no. of episodes')
+    parser.add_argument('--horizon', type=int, required=False, default=1000, help='Maximum no. of timesteps')
     parser.add_argument('--env', type=str, required=True, help='Gym environment')
 
     args = parser.parse_args()
