@@ -2,7 +2,7 @@ import torch.nn as nn
 from torch.distributions import Categorical
 from models import PolicyNetwork, ValueNetwork
 
-class DiscreterMLPPolicyValue(nn.Module):
+class DiscreteMLPPolicyValue(nn.Module):
     def __init__(self, observation_space, action_space, device=None):
         super().__init__()
 
@@ -19,7 +19,7 @@ class DiscreterMLPPolicyValue(nn.Module):
     def __call__(self, state):
         return self.valuenet(state), Categorical(self.policynet(state))
 
-class DiscreterMLPPolicy(nn.Module):
+class DiscreteMLPPolicy(nn.Module):
     def __init__(self, observation_space, action_space, device=None):
         super().__init__()
 
