@@ -38,7 +38,8 @@ class PGReinforce(PGAgent):
 
 def main( args ):
     # The CartPole-v0 environment from OpenAI Gym
-    agent = PGReinforce(gym.make(args.env), DiscreteMLPPolicy, device=torch.device('cuda'))
+    agent = PGReinforce(gym.make(args.env), DiscreteMLPPolicy,
+        storages=['rewards', 'logprobs', 'values'], device=torch.device('cuda'))
     logger = SummaryWriter(f'exp/{args.tag}')
 
     # average episodic reward

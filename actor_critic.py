@@ -43,7 +43,8 @@ class PGActorCritic(PGAgent):
 
 def main( args ):
     # The CartPole-v0 environment from OpenAI Gym
-    agent = PGActorCritic(gym.make(args.env), DiscreteMLPPolicyValue, device=torch.device('cuda'))
+    agent = PGActorCritic(gym.make(args.env), DiscreteMLPPolicyValue,
+        storages=['rewards', 'logprobs', 'values'], device=torch.device('cuda'))
     logger = SummaryWriter(f'exp/{args.tag}')
 
     # average episodic reward

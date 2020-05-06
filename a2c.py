@@ -45,7 +45,8 @@ class PGA2C(PGAgent):
 
 def main( args ):
     # The CartPole-v0 environment from OpenAI Gym
-    agent = PGA2C(gym.make(args.env), DiscreteMLPPolicyValue, device=torch.device('cuda'))
+    agent = PGA2C(gym.make(args.env), DiscreteMLPPolicyValue,
+        storages=['rewards', 'logprobs', 'values', 'entropy'], device=torch.device('cuda'))
     logger = SummaryWriter(f'exp/{args.tag}')
 
     # average episodic reward
