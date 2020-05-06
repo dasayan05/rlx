@@ -3,7 +3,7 @@ import torch
 from torch.utils.tensorboard import SummaryWriter
 
 from agent import PGAgent
-from policy import DiscreterMLPPolicyValue
+from policy import DiscreteMLPPolicyValue
 
 class PGActorCritic(PGAgent):
     def __init__(self, *args, **kwargs):
@@ -43,7 +43,7 @@ class PGActorCritic(PGAgent):
 
 def main( args ):
     # The CartPole-v0 environment from OpenAI Gym
-    agent = PGActorCritic(gym.make(args.env), DiscreterMLPPolicyValue)
+    agent = PGActorCritic(gym.make(args.env), DiscreteMLPPolicyValue, device=torch.device('cuda'))
     logger = SummaryWriter(f'exp/{args.tag}')
 
     # average episodic reward

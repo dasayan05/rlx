@@ -8,11 +8,7 @@ class PGAgent(object):
         # Track arguments
         self.environment = env
         self.PolicyType = policytype
-
-        if device is None:
-            self.device = torch.device('cpu' if torch.cuda.is_available() else 'cpu')
-        else:
-            self.device = device
+        self.device = torch.device('cpu' if torch.cuda.is_available() else 'cpu') if device is None else device
 
         # Internal objects
         self.policy = self.PolicyType(self.environment.observation_space, self.environment.action_space, self.device)

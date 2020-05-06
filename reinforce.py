@@ -3,7 +3,7 @@ import torch
 from torch.utils.tensorboard import SummaryWriter
 
 from agent import PGAgent
-from policy import DiscreterMLPPolicy
+from policy import DiscreteMLPPolicy
 
 class PGReinforce(PGAgent):
     def __init__(self, *args, **kwargs):
@@ -38,7 +38,7 @@ class PGReinforce(PGAgent):
 
 def main( args ):
     # The CartPole-v0 environment from OpenAI Gym
-    agent = PGReinforce(gym.make(args.env), DiscreterMLPPolicy)
+    agent = PGReinforce(gym.make(args.env), DiscreteMLPPolicy, device=torch.device('cuda'))
     logger = SummaryWriter(f'exp/{args.tag}')
 
     # average episodic reward
