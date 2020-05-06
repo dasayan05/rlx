@@ -10,7 +10,7 @@ class PGReinforce(PGAgent):
         super().__init__(*args, **kwargs)
 
     def timestep(self, state):
-        action_dist = self.policy(state) # invoke the policy
+        action_dist = self(state) # invoke the policy
 
         action = action_dist.sample() # sample an action
         

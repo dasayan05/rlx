@@ -10,7 +10,7 @@ class PGA2C(PGAgent):
         super().__init__(*args, **kwargs)
 
     def timestep(self, state):
-        value, action_dist = self.policy(state)
+        value, action_dist = self(state)
 
         action = action_dist.sample() # sample an action
         

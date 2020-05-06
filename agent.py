@@ -2,18 +2,18 @@ import abc
 import torch
 
 class PGAgent(object):
-    def __init__(self, env, policytype, storages=[], device=None):
+    def __init__(self, env, Network, storages=[], device=None):
         super().__init__()
 
         # Track arguments
         self.environment = env
-        self.PolicyType = policytype
+        self.Network = Network
         self.device = torch.device('cpu' if torch.cuda.is_available() else 'cpu') if device is None else device
         self.storages = storages # names of containers to be used during episodes
 
         # Internal objects
-        self.policy = self.PolicyType(self.environment.observation_space, self.environment.action_space, self.device)
-        self.optimizer = torch.optim.Adam(self.policy.parameters())
+        self.network = self.Network(self.environment.observation_space, self.environment.action_space, self.device)
+        self.optimizer = torch.optim.Adam(self.network.parameters())
 
     def reset(self):
         initial_state = torch.from_numpy(self.environment.reset()).float().to(self.device)
@@ -28,6 +28,9 @@ class PGAgent(object):
     @abc.abstractmethod
     def compute_loss(self):
         pass
+
+    def __call__(self, *args, **kwargs):
+        return self.network(*args, **kwargs)
 
     def episode(self, max_length, **kwargs):
         ep_reward = 0 # total reward for full episode
