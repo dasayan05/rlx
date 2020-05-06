@@ -1,7 +1,7 @@
 import torch
 import torch.nn.functional as F
 
-class PolicyNetwork(torch.nn.Module):
+class FFPolicyNetwork(torch.nn.Module):
     def __init__(self, n_states, n_actions, n_affine = 256):
         super().__init__()
 
@@ -18,7 +18,7 @@ class PolicyNetwork(torch.nn.Module):
         x = F.relu(self.affine(x))
         return F.softmax(self.pi(x), dim=-1)
 
-class ValueNetwork(torch.nn.Module):
+class FFValueNetwork(torch.nn.Module):
     def __init__(self, n_states, n_affine = 256):
         super().__init__()
 
