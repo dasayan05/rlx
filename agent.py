@@ -2,18 +2,19 @@ import abc
 import torch
 
 class PGAgent(object):
-    def __init__(self, env, Network, storages=[], device=None):
+    def __init__(self, env, policy, storages=[], device=None):
         super().__init__()
 
         # Track arguments
         self.environment = env
-        self.Network = Network
+        self.policy = policy
         self.device = torch.device('cpu' if torch.cuda.is_available() else 'cpu') if device is None else device
         self.storages = storages # names of containers to be used during episodes
 
         # Internal objects
-        self.network = self.Network(self.environment.observation_space, self.environment.action_space, self.device)
-        self.optimizer = torch.optim.Adam(self.network.parameters())
+        # breakpoint()
+        self.network = self.policy(self.environment.observation_space, self.environment.action_space, self.device)
+        self.optimizer = torch.optim.Adam(self.network.parameters(), lr=1e-3)
 
     def reset(self):
         initial_state = torch.from_numpy(self.environment.reset()).float().to(self.device)
@@ -47,7 +48,7 @@ class PGAgent(object):
 
         self.network.reset()
 
-        return ep_reward, state
+        return ep_reward, state, t
 
     def train(self):
         self.optimizer.zero_grad()

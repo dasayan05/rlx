@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.distributions import Categorical
 from models import FFPolicyNetwork, FFValueNetwork, RNNPolicyNetwork
 
-class Policy(nn.Module):
+class Policy(object):
     def __init__(self, observation_space, action_space, device=None):
         super().__init__()
 
@@ -14,8 +14,14 @@ class Policy(nn.Module):
     @abc.abstractmethod
     def forward(self, state):
         pass
+    def __call__(self, state):
+        return self.forward(state)
 
     def reset(self):
+        pass
+
+    @abc.abstractmethod
+    def parameters(self):
         pass
 
 class DiscreteMLPPolicyValue(Policy):
@@ -28,6 +34,9 @@ class DiscreteMLPPolicyValue(Policy):
     def forward(self, state):
         return self.valuenet(state), Categorical(self.policynet(state))
 
+    def parameters(self):
+        return [*self.policynet.parameters(), *self.valuenet.parameters()]
+
 class DiscreteMLPPolicy(Policy):
     def __init__(self, observation_space, action_space, device=None):
         super().__init__(observation_space, action_space, device=device)
@@ -37,14 +46,20 @@ class DiscreteMLPPolicy(Policy):
     def forward(self, state):
         return Categorical(self.policynet(state))
 
+    def parameters(self):
+        return self.policynet.parameters()
+
 class DiscreteRNNPolicy(Policy):
     def __init__(self, observation_space, action_space, device=None):
         super().__init__(observation_space, action_space, device=device)
 
-        self.policynet = RNNPolicyNetwork(self.n_states - 1, self.n_actions).to(self.device)
+        self.policynet = RNNPolicyNetwork(self.n_states, self.n_actions).to(self.device)
     
     def forward(self, state):
-        return Categorical(self.policynet(state[:-1]))
+        return Categorical(self.policynet(state))
 
     def reset(self):
         self.policynet.h = None
+
+    def parameters(self):
+        return self.policynet.parameters()
