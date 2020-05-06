@@ -3,7 +3,7 @@ import torch
 from torch.utils.tensorboard import SummaryWriter
 
 from agent import PGAgent
-from policy import DiscreteMLPPolicy
+from policy import DiscreteMLPPolicy, DiscreteRNNPolicy
 
 class PGReinforce(PGAgent):
 
@@ -36,7 +36,7 @@ class PGReinforce(PGAgent):
 
 def main( args ):
     # The CartPole-v0 environment from OpenAI Gym
-    agent = PGReinforce(gym.make(args.env), DiscreteMLPPolicy,
+    agent = PGReinforce(gym.make(args.env), DiscreteRNNPolicy,
         storages=['rewards', 'logprobs', 'values'], device=torch.device('cuda'))
     logger = SummaryWriter(f'exp/{args.tag}')
 

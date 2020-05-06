@@ -45,6 +45,8 @@ class PGAgent(object):
             if done:
                 break
 
+        self.network.reset()
+
         return ep_reward, state
 
     def train(self):
