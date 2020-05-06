@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.distributions import Categorical
 from models import FFPolicyNetwork, FFValueNetwork, RNNPolicyNetwork
 
-class Policy(object):
+class Policy(nn.Module):
     def __init__(self, observation_space, action_space, device=None):
         super().__init__()
 
@@ -14,14 +14,8 @@ class Policy(object):
     @abc.abstractmethod
     def forward(self, state):
         pass
-    def __call__(self, state):
-        return self.forward(state)
 
     def reset(self):
-        pass
-
-    @abc.abstractmethod
-    def parameters(self):
         pass
 
 class DiscreteMLPPolicyValue(Policy):
@@ -60,6 +54,3 @@ class DiscreteRNNPolicy(Policy):
 
     def reset(self):
         self.policynet.h = None
-
-    def parameters(self):
-        return self.policynet.parameters()

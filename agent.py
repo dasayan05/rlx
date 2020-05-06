@@ -12,7 +12,6 @@ class PGAgent(object):
         self.storages = storages # names of containers to be used during episodes
 
         # Internal objects
-        # breakpoint()
         self.network = self.policy(self.environment.observation_space, self.environment.action_space, self.device)
         self.optimizer = torch.optim.Adam(self.network.parameters(), lr=1e-3)
 
