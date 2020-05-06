@@ -6,8 +6,6 @@ from agent import PGAgent
 from policy import DiscreteMLPPolicy
 
 class PGReinforce(PGAgent):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
 
     def timestep(self, state):
         action_dist = self(state) # invoke the policy
