@@ -52,14 +52,14 @@ def main( args ):
 
     # loop for many episodes
     for episode in range(args.max_episode):
-        ep_reward, last_state = agent.episode(args.horizon, render=args.render, interval=args.interval)
+        ep_reward, last_state, length = agent.episode(args.horizon, render=args.render, interval=args.interval)
         # little hack, need to fix the interface
         value = agent.network.valuenet(last_state); agent.values.append( value )
         agent.train()
         
         running_reward = 0.05 * ep_reward + (1 - 0.05) * running_reward
         if episode % args.interval == 0:
-            print(f'Running reward at episode {episode}: {running_reward}')
+            print(f'Running reward at episode {episode}: {running_reward}; Length: {length}')
             logger.add_scalar('avg_reward', running_reward, global_step=episode)
 
 if __name__ == '__main__':
