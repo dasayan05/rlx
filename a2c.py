@@ -56,7 +56,7 @@ def main( args ):
     for episode in range(args.max_episode):
         ep_reward, last_state = agent.episode(args.horizon, render=args.render, interval=args.interval)
         # little hack, need to fix the interface
-        value = agent.policy.valuenet(last_state); agent.values.append( value )
+        value = agent.network.valuenet(last_state); agent.values.append( value )
         agent.train()
         
         running_reward = 0.05 * ep_reward + (1 - 0.05) * running_reward
