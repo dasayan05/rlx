@@ -47,13 +47,13 @@ class DiscreteRNNPolicy(Policy):
     def __init__(self, observation_space, action_space, device=None):
         super().__init__(observation_space, action_space, device=device)
 
-        self.policynet = RNNPolicyNetwork(self.n_states - 1, self.n_actions).to(self.device)
+        self.policynet = RNNPolicyNetwork(self.n_states, self.n_actions).to(self.device)
     
     def forward(self, state):
-        return Categorical(self.policynet(state[:-1]))
+        return Categorical(self.policynet(state))
 
     def reset(self):
-        self.policynet.h = []
+        self.policynet.h = None
 
 class DiscreteRNNPolicyValue(Policy):
     def __init__(self, observation_space, action_space, device=None):

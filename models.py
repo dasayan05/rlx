@@ -49,8 +49,8 @@ class RNNPolicyNetwork(torch.nn.Module):
         self.pi = torch.nn.Linear(self.n_hidden, self.n_actions)
 
     def forward(self, state):
-        self.h.append( F.leaky_relu(self.cell(state.unsqueeze(0), None if len(self.h) == 0 else self.h[-1])) )
-        pi = self.pi(self.h[-1])
+        self.h = self.cell(state.unsqueeze(0), self.h)
+        pi = self.pi(self.h)
         return F.softmax(pi, 1)
 
 class RNNPolicyValueNetwork(torch.nn.Module):

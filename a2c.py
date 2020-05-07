@@ -1,3 +1,4 @@
+import os
 import gym
 import torch
 from torch.utils.tensorboard import SummaryWriter
@@ -45,7 +46,7 @@ def main( args ):
     # The CartPole-v0 environment from OpenAI Gym
     agent = PGA2C(gym.make(args.env), DiscreteMLPPolicyValue,
         storages=['rewards', 'logprobs', 'values', 'entropy'], device=torch.device('cuda'))
-    logger = SummaryWriter(f'exp/{args.tag}')
+    logger = SummaryWriter(os.path.join(args.base, f'exp/{args.tag}'))
 
     # average episodic reward
     running_reward = 0
@@ -65,6 +66,7 @@ def main( args ):
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser()
+    parser.add_argument('--base', type=str, required=False, default='.', help='Base folder (for condor)')
     parser.add_argument('--gamma', type=float, required=False, default=0.99, help='Discount factor')
     parser.add_argument('--render', action='store_true', help='Render environment')
     parser.add_argument('--interval', type=int, required=False, default=10, help='Logging freq')
