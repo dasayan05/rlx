@@ -2,7 +2,7 @@ import abc
 import torch
 
 class PGAgent(object):
-    def __init__(self, env, policy, storages=[], device=None):
+    def __init__(self, env, policy, storages=[], device=None, lr=1e-4):
         super().__init__()
 
         # Track arguments
@@ -13,7 +13,7 @@ class PGAgent(object):
 
         # Internal objects
         self.network = self.policy(self.environment.observation_space, self.environment.action_space, self.device)
-        self.optimizer = torch.optim.Adam(self.network.parameters(), lr=1e-3)
+        self.optimizer = torch.optim.Adam(self.network.parameters(), lr=lr)
 
     def reset(self):
         initial_state = torch.from_numpy(self.environment.reset()).float().to(self.device)
@@ -36,6 +36,8 @@ class PGAgent(object):
         ep_reward = 0 # total reward for full episode
 
         state = self.reset() # prepares for a new episode
+        self.network.reset()
+
         # loop for many time-steps
         for t in range(max_length):            
             next_state, r, done = self.timestep(state)
@@ -44,8 +46,6 @@ class PGAgent(object):
             
             if done:
                 break
-
-        self.network.reset()
 
         return ep_reward, state, t
 
