@@ -53,7 +53,8 @@ class PGAgent(object):
 
         return rollout
 
-    def step(self, loss):
+    def zero_grad(self):
         self.optimizer.zero_grad()
-        loss.backward()
+
+    def step(self):
         self.optimizer.step()
