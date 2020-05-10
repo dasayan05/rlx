@@ -1,56 +1,59 @@
 import abc
 import torch
 
+from utils import Rollout
+
 class PGAgent(object):
-    def __init__(self, env, policy, storages=[], device=None, lr=1e-4):
+    def __init__(self, env, policy, device=None, lr=1e-4):
         super().__init__()
 
         # Track arguments
         self.environment = env
         self.policy = policy
         self.device = torch.device('cpu' if torch.cuda.is_available() else 'cpu') if device is None else device
-        self.storages = storages # names of containers to be used during episodes
 
         # Internal objects
-        self.network = self.policy(self.environment.observation_space, self.environment.action_space, self.device)
+        self.network = self.policy((self.environment.observation_space,), (self.environment.action_space,), n_hidden=128)
+        if torch.cuda.is_available():
+            self.network = self.network.to(device)
+
         self.optimizer = torch.optim.Adam(self.network.parameters(), lr=lr)
 
     def reset(self):
-        initial_state = torch.from_numpy(self.environment.reset()).float().to(self.device)
-        for storage in self.storages:
-            setattr(self, storage, []) # one list for every storage
-        return initial_state
+        return torch.from_numpy(self.environment.reset()).float().to(self.device)
 
-    @abc.abstractmethod
-    def timestep(self, state):
-        pass
+    def timestep(self, *states):
+        action_dist, *extra = self.network(*states) # invoke the policy
+        action = action_dist.sample() # sample an action
+        
+        # Transition to new state and retrieve a reward
+        st, reward, done, _ = self.environment.step(*[a.item() for a in action])
+        # TODO: The below state can have multiple components
+        next_state = torch.from_numpy(st).float().to(self.device) # update current state
+        logprob = action_dist.log_prob(*action)
 
-    @abc.abstractmethod
-    def compute_loss(self):
-        pass
+        return (action, logprob, reward, next_state, done, *extra)
 
-    def __call__(self, *args, **kwargs):
-        return self.network(*args, **kwargs)
-
-    def episode(self, max_length, **kwargs):
+    def episode(self, horizon, global_state=None, detach=False):
         ep_reward = 0 # total reward for full episode
 
         state = self.reset() # prepares for a new episode
         self.network.reset()
 
+        rollout = Rollout(device=self.device)
+
         # loop for many time-steps
-        for t in range(max_length):            
-            next_state, r, done = self.timestep(state)
+        for t in range(horizon):
+            state_tuple = (state,) if global_state is None else (state, global_state)
+            action, logprob, reward, next_state, done, *extra = self.timestep(*state_tuple)
+            rollout.step(state, action, reward, logprob, *extra)
             state = next_state
-            ep_reward += r
             
-            if done:
-                break
+            if done: break
 
-        return ep_reward, state, t
+        return rollout
 
-    def train(self):
+    def step(self, loss):
         self.optimizer.zero_grad()
-        loss = self.compute_loss()
         loss.backward()
         self.optimizer.step()

@@ -1,69 +1,115 @@
 import abc
+import torch
 import torch.nn as nn
+import torch.nn.functional as F
+import torch.distributions as dist
 from torch.distributions import Categorical
-from models import FFPolicyNetwork, FFValueNetwork, RNNPolicyNetwork, RNNPolicyValueNetwork
 
-class Policy(nn.Module):
-    def __init__(self, observation_space, action_space, device=None):
+from utils import ActionDistribution
+
+class Parametric(nn.Module):
+    def __init__(self, observation_spaces, action_spaces):
         super().__init__()
 
-        self.n_states = observation_space.shape[0]
-        self.n_actions = action_space.n
-        self.device = torch.device('cpu' if torch.cuda.is_available() else 'cpu') if device is None else device
+        assert isinstance(observation_spaces, tuple), "There must be a list (potentially singleton) of observation spaces"
+        assert isinstance(action_spaces, tuple), "There must be a list (potentially singleton) of action spaces"
+
+        self.n_states = tuple(obs_space.shape[0] for obs_space in observation_spaces)
+        self.n_actions = tuple(act_space.n for act_space in action_spaces)
 
     @abc.abstractmethod
-    def forward(self, state):
+    def forward(self, *states):
         pass
 
     def reset(self):
         pass
 
-class DiscreteMLPPolicyValue(Policy):
-    def __init__(self, observation_space, action_space, device=None):
-        super().__init__(observation_space, action_space, device=device)
+class DiscreteMLPPolicy(Parametric):
+    def __init__(self, observation_spaces, action_spaces, *, n_hidden=128):
+        super().__init__(observation_spaces, action_spaces)
+        assert len(self.n_states) == 1 and len(self.n_actions) == 1, "(Temporary) Only one observation and action per timestep"
 
-        self.policynet = FFPolicyNetwork(self.n_states, self.n_actions).to(self.device)
-        self.valuenet = FFValueNetwork(self.n_states).to(self.device)
+        # Track arguments for further use
+        self.n_states = self.n_states[0]
+        self.n_actions = self.n_actions[0]
+        self.n_hidden = n_hidden
 
-    def forward(self, state):
-        return self.valuenet(state), Categorical(self.policynet(state))
+        # Layer definitions
+        self.affine = torch.nn.Linear(self.n_states, self.n_hidden)
+        self.pi = torch.nn.Linear(self.n_hidden, self.n_actions)
 
-    def parameters(self):
-        return [*self.policynet.parameters(), *self.valuenet.parameters()]
+    def forward(self, *states):
+        state = torch.cat([state for state in states], dim=-1)
+        h = F.relu(self.affine(state.unsqueeze(0)))
+        act = Categorical(F.softmax(self.pi(h), dim=-1))
+        return ActionDistribution(act), None
 
-class DiscreteMLPPolicy(Policy):
-    def __init__(self, observation_space, action_space, device=None):
-        super().__init__(observation_space, action_space, device=device)
+class DiscreteMLPPolicyValue(Parametric):
+    def __init__(self, observation_spaces, action_spaces, *, n_hidden=128):
+        super().__init__(observation_spaces, action_spaces)
+        assert len(self.n_states) == 1 and len(self.n_actions) == 1, "(Temporary) Only one observation and action per timestep"
 
-        self.policynet = FFPolicyNetwork(self.n_states, self.n_actions).to(self.device)
+        # Track arguments for further use
+        self.n_states = self.n_states[0]
+        self.n_actions = self.n_actions[0]
+        self.n_hidden = n_hidden
 
-    def forward(self, state):
-        return Categorical(self.policynet(state))
+        # Layer definitions
+        self.affine = torch.nn.Linear(self.n_states, self.n_hidden)
+        self.pi = torch.nn.Linear(self.n_hidden, self.n_actions)
+        self.value = torch.nn.Linear(self.n_hidden, 1)
 
-    def parameters(self):
-        return self.policynet.parameters()
+    def forward(self, *states):
+        state = torch.cat([state for state in states], dim=-1)
+        h = F.relu(self.affine(state.unsqueeze(0)))
+        act = Categorical(F.softmax(self.pi(h), dim=-1))
+        v = self.value(h)
+        return ActionDistribution(act), v
 
-class DiscreteRNNPolicy(Policy):
-    def __init__(self, observation_space, action_space, device=None):
-        super().__init__(observation_space, action_space, device=device)
+class DiscreteRNNPolicy(Parametric):
+    def __init__(self, observation_spaces, action_spaces, *, n_hidden=128):
+        super().__init__(observation_spaces, action_spaces)
+        assert len(self.n_states) == 1 and len(self.n_actions) == 1, "(Temporary) Only one observation and action per timestep"
 
-        self.policynet = RNNPolicyNetwork(self.n_states, self.n_actions).to(self.device)
+        # Track arguments for further use
+        self.n_states = self.n_states[0]
+        self.n_actions = self.n_actions[0]
+        self.n_hidden = n_hidden
+
+        # Layer definitions
+        self.cell, self.h = torch.nn.GRUCell(self.n_states, self.n_hidden), None
+        self.pi = torch.nn.Linear(self.n_hidden, self.n_actions)
     
-    def forward(self, state):
-        return Categorical(self.policynet(state))
+    def forward(self, *states):
+        state = torch.cat([state for state in states], dim=-1)
+        self.h = self.cell(state.unsqueeze(0), self.h)
+        act = Categorical(F.softmax(self.pi(self.h), dim=-1))
+        return ActionDistribution(act), None
 
     def reset(self):
-        self.policynet.h = None
+        self.h = None
 
-class DiscreteRNNPolicyValue(Policy):
-    def __init__(self, observation_space, action_space, device=None):
-        super().__init__(observation_space, action_space, device=device)
+class DiscreteRNNPolicyValue(Parametric):
+    def __init__(self, observation_spaces, action_spaces, *, n_hidden=128):
+        super().__init__(observation_spaces, action_spaces)
+        assert len(self.n_states) == 1 and len(self.n_actions) == 1, "(Temporary) Only one observation and action per timestep"
 
-        self.policynet = RNNPolicyValueNetwork(self.n_states, self.n_actions).to(self.device)
+        # Track arguments for further use
+        self.n_states = self.n_states[0]
+        self.n_actions = self.n_actions[0]
+        self.n_hidden = n_hidden
+
+        # Layer definitions
+        self.cell, self.h = torch.nn.GRUCell(self.n_states, self.n_hidden), None
+        self.pi = torch.nn.Linear(self.n_hidden, self.n_actions)
+        self.V = torch.nn.Linear(self.n_hidden, 1)
     
-    def forward(self, state):
-        action_probs, val = self.policynet(state)
-        return val, Categorical(action_probs)
+    def forward(self, *states):
+        state = torch.cat([state for state in states], dim=-1)
+        self.h = self.cell(state.unsqueeze(0), self.h)
+        act = Categorical(F.softmax(self.pi(self.h), dim=-1))
+        v = self.V(self.h)
+        return ActionDistribution(act), v
 
     def reset(self):
-        self.policynet.h = None
+        self.h = None
