@@ -1,75 +1,43 @@
 import torch
 import torch.distributions as dist
 
-def compute_returns(rewards, gamma = 0.99):
-    # compute return (sum of future rewards)
+def compute_returns(rewards, gamma = 1.0):
+    '''
+    Computes 'return' (sum of future rewards, optionally discounted)
+    Arguments:
+        rewards: A sequence of rewards
+        gamma: (optional) Discount factor
+    '''
     returns = [rewards[-1].view(1,),]
     for r in reversed(rewards[:-1]):
         returns.insert(0, (r + gamma * returns[0]).view(1,))
     returns = torch.cat(returns, dim=-1)
     return (returns - returns.mean()) / returns.std()
 
-class Rollout(object):
-    ''' Contains one single rollout/episode '''
-
-    def __init__(self, device=None):
-        super().__init__()
-
-        # The data container
-        self.__states, self.__actions, self.__rewards = [], [], []
-        self.__logprobs = []
-        self.__others = []
-
-        self.device = torch.device('cpu' if torch.cuda.is_available() else 'cpu') if device is None else device
-
-    def __len__(self):
-        return len(self.__states) # length of any one attribute
-
-    def __iter__(self):
-        self.t = 0
-        return self
-
-    @property
-    def rewards(self):
-        return torch.tensor(self.__rewards, device=self.device)
-
-    @property
-    def logprobs(self):
-        return torch.cat(self.__logprobs, dim=-1)
-
-    @property
-    def others(self):
-        n_others = len(self.__others[0])
-        if n_others != 0:
-            return tuple(torch.tensor([q[index] for q in self.__others], device=self.device)
-                        for index in range(n_others))
-
-    def __next__(self):
-        if self.t < self.__len__():
-            s, a, r, logprob, *extra = self.__data[self.t]
-            self.t += 1
-            return (s, a, r), logprob, extra
-        else:
-            raise StopIteration
-
-    def step(self, state, action, reward, logprob, *other):
-        self.__states.append( state )
-        self.__actions.append( action )
-        self.__rewards.append( reward )
-        self.__logprobs.append( logprob )
-        self.__others.append( other )
-
 class ActionDistribution(object):
-    ''' Encapsulates a multi-part action distribution '''
+    """ Encapsulates a multi-part action distribution """
 
     def __init__(self, *distribs: dist.Distribution):
+        '''
+        Constructs an object from a variable number of 'dist.Distribution's
+        Arguments:
+            *distribs: A set of 'dist.Distribution' instances
+        '''
         super().__init__()
-        # Track the arguments
+
         self.distribs = distribs
+        self.n_dist = len(self.distribs)
 
     def sample(self):
+        ''' Sample an action (set of several constituent actions) '''
         return tuple(d.sample() for d in self.distribs)
 
     def log_prob(self, *samples):
-        # breakpoint()
+        '''
+        Computes the log-probability of the action-tuple under this ActionDistribution.
+        Note: Assumed to be independent, i.e., probs factorize.
+        Arguments:
+            samples: A tuple of actions
+        '''
+        assert len(samples) == self.n_dist, "Number of constituent distributions is different than number of samples"
         return sum([d.log_prob(s) for d, s in zip(self.distribs, samples)])

@@ -8,7 +8,17 @@ from torch.distributions import Categorical
 from utils import ActionDistribution
 
 class Parametric(nn.Module):
+    """
+    Base class of the learnable component of an agent. It should contain Policy, Value etc.
+
+    Required API:
+        forward(states) -> ActionDistribution, others (Given states, returns ActionDistribution and other stuff)
+        reset() -> None (Resets the internals of the learnable. Specifically required for RNNs)
+    """
+
     def __init__(self, observation_spaces, action_spaces):
+        ''' Constructs every learnable item from environment specifications. '''
+
         super().__init__()
 
         assert isinstance(observation_spaces, tuple), "There must be a list (potentially singleton) of observation spaces"
@@ -25,7 +35,11 @@ class Parametric(nn.Module):
         pass
 
 class DiscreteMLPPolicy(Parametric):
+    """ Feed forward policy for discrete action space """
+
     def __init__(self, observation_spaces, action_spaces, *, n_hidden=128):
+        ''' Constructs every learnable item from environment specifications. '''
+
         super().__init__(observation_spaces, action_spaces)
         assert len(self.n_states) == 1 and len(self.n_actions) == 1, "(Temporary) Only one observation and action per timestep"
 
@@ -45,7 +59,11 @@ class DiscreteMLPPolicy(Parametric):
         return ActionDistribution(act), None
 
 class DiscreteMLPPolicyValue(Parametric):
+    """ Feed forward (policy + value) for discrete action space """
+
     def __init__(self, observation_spaces, action_spaces, *, n_hidden=128):
+        ''' Constructs every learnable item from environment specifications. '''
+
         super().__init__(observation_spaces, action_spaces)
         assert len(self.n_states) == 1 and len(self.n_actions) == 1, "(Temporary) Only one observation and action per timestep"
 
@@ -67,7 +85,11 @@ class DiscreteMLPPolicyValue(Parametric):
         return ActionDistribution(act), v
 
 class DiscreteRNNPolicy(Parametric):
+    """ Recurrent policy for discrete action space """
+
     def __init__(self, observation_spaces, action_spaces, *, n_hidden=128):
+        ''' Constructs every learnable item from environment specifications. '''
+
         super().__init__(observation_spaces, action_spaces)
         assert len(self.n_states) == 1 and len(self.n_actions) == 1, "(Temporary) Only one observation and action per timestep"
 
@@ -90,7 +112,11 @@ class DiscreteRNNPolicy(Parametric):
         self.h = None
 
 class DiscreteRNNPolicyValue(Parametric):
+    """ Recurrent (policy + value) for discrete action space """
+
     def __init__(self, observation_spaces, action_spaces, *, n_hidden=128):
+        ''' Constructs every learnable item from environment specifications. '''
+
         super().__init__(observation_spaces, action_spaces)
         assert len(self.n_states) == 1 and len(self.n_actions) == 1, "(Temporary) Only one observation and action per timestep"
 

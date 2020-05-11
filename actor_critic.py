@@ -32,7 +32,7 @@ def main( args ):
                 rollout = agent.episode(args.horizon)
                 avg_length = ((avg_length * b) + len(rollout)) // (b + 1)
                 rewards, logprobs = rollout.rewards, rollout.logprobs
-                returns = compute_returns(rewards, args.gamma).to(rollout.device)
+                returns = compute_returns(rewards, args.gamma)
                 values, = rollout.others
 
                 advantage = returns - values.detach()
