@@ -48,9 +48,10 @@ def main( args ):
                 logger.add_scalar('length', avg_length, global_step=episode)
             
             # TQDM update stuff
-            tqEpisodes.postfix[0]['r'] = running_reward
-            tqEpisodes.postfix[0]['l'] = avg_length
-            tqEpisodes.update()
+            if not tqEpisodes.disable:
+                tqEpisodes.postfix[0]['r'] = running_reward
+                tqEpisodes.postfix[0]['l'] = avg_length
+                tqEpisodes.update()
 
 if __name__ == '__main__':
     import argparse
