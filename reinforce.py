@@ -8,7 +8,8 @@ from utils import compute_returns
 from policy import DiscreteMLPPolicy, DiscreteRNNPolicy
 
 def main( args ):
-    agent = PGAgent(gym.make(args.env), DiscreteRNNPolicy, device=torch.device('cuda'))
+    Policy = DiscreteRNNPolicy if args.policytype == 'rnn' else DiscreteMLPPolicy
+    agent = PGAgent(gym.make(args.env), Policy, device=torch.device('cuda'))
     logger = SummaryWriter(os.path.join(args.base, f'exp/{args.tag}'))
 
     # average episodic reward
@@ -43,6 +44,7 @@ if __name__ == '__main__':
     parser.add_argument('--base', type=str, required=False, default='.', help='Base folder (for condor)')
     parser.add_argument('--gamma', type=float, required=False, default=0.999, help='Discount factor')
     parser.add_argument('--render', action='store_true', help='Render environment')
+    parser.add_argument('--policytype', type=str, required=True, choices=['rnn', 'mlp'], help='Type of policy')
     parser.add_argument('--tag', type=str, required=True, help='Identifier for experiment')
     parser.add_argument('--interval', type=int, required=False, default=10, help='Logging freq')
     parser.add_argument('--batch_size', type=int, required=False, default=8, help='Batch size')
