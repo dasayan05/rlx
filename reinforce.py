@@ -2,6 +2,7 @@ import os
 import gym
 import torch
 from torch.utils.tensorboard import SummaryWriter
+from tqdm import tqdm
 
 from agent import PGAgent
 from utils import compute_returns
@@ -15,28 +16,41 @@ def main( args ):
     # average episodic reward
     running_reward = 0.
 
-    # loop for many episodes
-    for episode in range(args.max_episode):
-        avg_length = 0
+    # TQDM Formatting
+    TQDMBar = '{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, ' + \
+                    'Reward: {postfix[0][r]:>3.2f}, ' + \
+                    'Length: {postfix[0][l]:3d}]'
+
+    with tqdm(total=args.max_episode, bar_format=TQDMBar, disable=None, postfix=[dict(r=0.,l=0)]) as tqEpisodes:
         
-        agent.zero_grad()
-        for b in range(args.batch_size):
-            rollout = agent.episode(args.horizon)
-            avg_length = ((avg_length * b) + len(rollout)) // (b + 1)
-            rewards, logprobs = rollout.rewards, rollout.logprobs
-            returns = compute_returns(rewards, args.gamma).to(rollout.device)
+        # loop for many episodes
+        for episode in range(args.max_episode):
+            avg_length = 0
+            
+            agent.zero_grad()
+            for b in range(args.batch_size):
+                rollout = agent.episode(args.horizon)
+                avg_length = ((avg_length * b) + len(rollout)) // (b + 1)
+                rewards, logprobs = rollout.rewards, rollout.logprobs
+                returns = compute_returns(rewards, args.gamma).to(rollout.device)
 
-            policyloss = - returns * logprobs
-            loss = policyloss.sum()
-            loss /= args.batch_size
-            loss.backward()
-        agent.step()
+                policyloss = - returns * logprobs
+                loss = policyloss.sum()
+                loss /= args.batch_size
+                loss.backward()
+            agent.step()
 
-        running_reward = 0.05 * rewards.sum().detach().item() + (1 - 0.05) * running_reward
-        if episode % args.interval == 0:
-            print(f'[{episode:5d}/{args.max_episode}] Running reward: {running_reward:>4.2f}, Avg. Length: {avg_length:3d}')
-            logger.add_scalar('avg_reward', running_reward, global_step=episode)
-            logger.add_scalar('length', avg_length, global_step=episode)
+            running_reward = 0.05 * rewards.sum().detach().item() + (1 - 0.05) * running_reward
+            if episode % args.interval == 0:
+                if tqEpisodes.disable:
+                    print(f'[{episode:5d}/{args.max_episode}] Running reward: {running_reward:>4.2f}, Avg. Length: {avg_length:3d}')
+                logger.add_scalar('reward', running_reward, global_step=episode)
+                logger.add_scalar('length', avg_length, global_step=episode)
+            
+            # TQDM update stuff
+            tqEpisodes.postfix[0]['r'] = running_reward
+            tqEpisodes.postfix[0]['l'] = avg_length
+            tqEpisodes.update()
 
 if __name__ == '__main__':
     import argparse
