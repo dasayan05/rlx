@@ -1,6 +1,14 @@
 import torch
 import torch.distributions as dist
 
+def compute_returns(rewards, gamma = 0.99):
+    # compute return (sum of future rewards)
+    returns = [rewards[-1],]
+    for r in reversed(rewards[:-1]):
+        returns.insert(0, r + gamma * returns[0])
+    returns = torch.tensor(returns)
+    return (returns - returns.mean()) / returns.std()
+
 class Rollout(object):
     ''' Contains one single rollout/episode '''
 
@@ -21,25 +29,19 @@ class Rollout(object):
         self.t = 0
         return self
 
+    @property
     def rewards(self):
         return torch.tensor(self.__rewards, device=self.device)
 
-    def returns(self, gamma = 0.99):
-        # compute return (sum of future rewards)
-        returns = [self.__rewards[-1]]
-        for r in reversed(self.__rewards[:-1]):
-            returns.insert(0, r + gamma * returns[0])
-        return torch.tensor(returns, device=self.device)
-
+    @property
     def logprobs(self):
         return torch.cat(self.__logprobs, dim=-1)
 
+    @property
     def others(self):
         n_others = len(self.__others[0])
-        if n_others == 0:
-            return None
-        else:
-            return tuple([q[index] for q in self.__others]
+        if n_others != 0:
+            return tuple(torch.tensor([q[index] for q in self.__others], device=self.device)
                         for index in range(n_others))
 
     def __next__(self):

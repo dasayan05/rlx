@@ -4,10 +4,10 @@ import torch
 from torch.utils.tensorboard import SummaryWriter
 
 from agent import PGAgent
+from utils import compute_returns
 from policy import DiscreteMLPPolicyValue, DiscreteRNNPolicyValue
 
 def main( args ):
-    # The CartPole-v0 environment from OpenAI Gym
     agent = PGAgent(gym.make(args.env), DiscreteRNNPolicyValue, device=torch.device('cuda'))
     logger = SummaryWriter(os.path.join(args.base, f'exp/{args.tag}'))
 
@@ -16,15 +16,15 @@ def main( args ):
 
     # loop for many episodes
     for episode in range(args.max_episode):
+        avg_length = 0
+        
         agent.zero_grad()
-        avg_rollout_length = 0.
         for b in range(args.batch_size):
-            rollout = agent.episode(args.horizon); avg_rollout_length = ((avg_rollout_length * b) + len(rollout)) / (b + 1)
-            logprobs = rollout.logprobs()
-            rewards = rollout.rewards()
-            returns = rollout.returns(args.gamma); returns = returns.to(rollout.device)
-            returns = (returns - returns.mean()) / returns.std()
-            values, = rollout.others(); values = torch.cat(values).squeeze().to(rollout.device)
+            rollout = agent.episode(args.horizon)
+            avg_length = ((avg_length * b) + len(rollout)) // (b + 1)
+            rewards, logprobs = rollout.rewards, rollout.logprobs
+            returns = compute_returns(rewards, args.gamma).to(rollout.device)
+            values, = rollout.others
 
             advantage = returns - values.detach()
             policyloss = - advantage * logprobs
@@ -36,8 +36,9 @@ def main( args ):
 
         running_reward = 0.05 * rewards.sum().detach().item() + (1 - 0.05) * running_reward
         if episode % args.interval == 0:
-            print(f'Running reward at episode {episode}: {running_reward:.3f}; Length: {int(avg_rollout_length):3d}')
-            logger.add_scalar('avg_reward', running_reward, global_step=episode)
+            print(f'[{episode:5d}/{args.max_episode}] Running reward: {running_reward:>4.2f}, Avg. Length: {avg_length:3d}')
+            logger.add_scalar('reward', running_reward, global_step=episode)
+            logger.add_scalar('length', avg_length, global_step=episode)
 
 if __name__ == '__main__':
     import argparse
@@ -46,7 +47,7 @@ if __name__ == '__main__':
     parser.add_argument('--gamma', type=float, required=False, default=0.999, help='Discount factor')
     parser.add_argument('--render', action='store_true', help='Render environment')
     parser.add_argument('--interval', type=int, required=False, default=10, help='Logging freq')
-    parser.add_argument('--batch_size', type=int, required=False, default=5, help='Batch size')
+    parser.add_argument('--batch_size', type=int, required=False, default=8, help='Batch size')
     parser.add_argument('--tag', type=str, required=True, help='Identifier for experiment')
     parser.add_argument('--max_episode', type=int, required=False, default=500, help='Maximum no. of episodes')
     parser.add_argument('--horizon', type=int, required=False, default=1000, help='Maximum no. of timesteps')
