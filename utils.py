@@ -3,10 +3,10 @@ import torch.distributions as dist
 
 def compute_returns(rewards, gamma = 0.99):
     # compute return (sum of future rewards)
-    returns = [rewards[-1],]
+    returns = [rewards[-1].view(1,),]
     for r in reversed(rewards[:-1]):
-        returns.insert(0, r + gamma * returns[0])
-    returns = torch.tensor(returns)
+        returns.insert(0, (r + gamma * returns[0]).view(1,))
+    returns = torch.cat(returns, dim=-1)
     return (returns - returns.mean()) / returns.std()
 
 class Rollout(object):
