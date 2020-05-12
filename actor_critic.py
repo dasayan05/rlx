@@ -29,7 +29,7 @@ def main( args ):
             
             agent.zero_grad()
             for b in range(args.batch_size):
-                rollout = agent.episode(args.horizon)
+                rollout = agent.episode(args.horizon, render=(args.render, 0.01))
                 avg_length = ((avg_length * b) + len(rollout)) // (b + 1)
                 rewards, logprobs = rollout.rewards, rollout.logprobs
                 returns = compute_returns(rewards, args.gamma)

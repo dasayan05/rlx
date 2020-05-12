@@ -1,4 +1,4 @@
-import abc
+import abc, time
 import torch
 
 from rollout import Rollout
@@ -50,13 +50,14 @@ class PGAgent(object):
 
         return (action, logprob, reward, next_state, done, *others)
 
-    def episode(self, horizon, global_state=None, detach=False):
+    def episode(self, horizon, global_state=None, detach=False, render=(False, 0)):
         '''
         Samples and returns an entire rollout (as 'Rollout' instance).
         Arguments:
             horizon: Maximum length of the episode.
             global_state: A global state for the whole episode. (TODO: Look into this interface)
             detach: TODO: Yet to implement a better interface for detaching.
+            render: A 2-tuple (bool, float) containing whether want to render and an optional time delay
         '''
 
         ep_reward = 0 # total reward for full episode
@@ -69,6 +70,13 @@ class PGAgent(object):
         # loop for many time-steps
         for t in range(horizon):
             state_tuple = (state,) if global_state is None else (state, global_state)
+            
+            # Rendering (with optional time delay)
+            is_render, delay = render
+            if is_render:
+                self.environment.render()
+                time.sleep(delay)
+            
             action, logprob, reward, next_state, done, *others = self.timestep(*state_tuple)
             rollout << (state, action, reward, logprob, *others)
             state = next_state
