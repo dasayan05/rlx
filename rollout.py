@@ -51,7 +51,7 @@ class Rollout(object):
         if self.t < len(self):
             s, a, r = self.__states[self.t], self.__actions[self.t], self.__rewards[self.t]
             logprob = self.__logprobs[self.t]
-            other = self.__data[self.t]
+            other = self.__others[self.t]
             self.t += 1
             return (s, a, r), logprob, other
         else:

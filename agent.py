@@ -37,16 +37,18 @@ class PGAgent(object):
     def timestep(self, *states):
         ''' Given a state-tuple, returns the rest of an experience tuple '''
 
-        action_dist, *extra = self.network(*states) # invoke the policy
+        # Concat the 'global_state', if any.
+        full_state = torch.cat([state for state in states], dim=-1)
+
+        action_dist, *others = self.network(full_state) # invoke the policy
         action = action_dist.sample() # sample an action
         
         # Transition to new state and retrieve a reward
         st, reward, done, _ = self.environment.step(*[a.item() for a in action])
-        # TODO: The below state can have multiple components
         next_state = torch.from_numpy(st).float().to(self.device) # update current state
         logprob = action_dist.log_prob(*action)
 
-        return (action, logprob, reward, next_state, done, *extra)
+        return (action, logprob, reward, next_state, done, *others)
 
     def episode(self, horizon, global_state=None, detach=False):
         '''
@@ -67,8 +69,8 @@ class PGAgent(object):
         # loop for many time-steps
         for t in range(horizon):
             state_tuple = (state,) if global_state is None else (state, global_state)
-            action, logprob, reward, next_state, done, *extra = self.timestep(*state_tuple)
-            rollout << (state, action, reward, logprob, *extra)
+            action, logprob, reward, next_state, done, *others = self.timestep(*state_tuple)
+            rollout << (state, action, reward, logprob, *others)
             state = next_state
             
             if done: break

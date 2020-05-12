@@ -52,8 +52,7 @@ class DiscreteMLPPolicy(Parametric):
         self.affine = torch.nn.Linear(self.n_states, self.n_hidden)
         self.pi = torch.nn.Linear(self.n_hidden, self.n_actions)
 
-    def forward(self, *states):
-        state = torch.cat([state for state in states], dim=-1)
+    def forward(self, state):
         h = F.relu(self.affine(state.unsqueeze(0)))
         act = Categorical(F.softmax(self.pi(h), dim=-1))
         return ActionDistribution(act), None
@@ -77,8 +76,7 @@ class DiscreteMLPPolicyValue(Parametric):
         self.pi = torch.nn.Linear(self.n_hidden, self.n_actions)
         self.value = torch.nn.Linear(self.n_hidden, 1)
 
-    def forward(self, *states):
-        state = torch.cat([state for state in states], dim=-1)
+    def forward(self, state):
         h = F.relu(self.affine(state.unsqueeze(0)))
         act = Categorical(F.softmax(self.pi(h), dim=-1))
         v = self.value(h)
@@ -102,8 +100,7 @@ class DiscreteRNNPolicy(Parametric):
         self.cell, self.h = torch.nn.GRUCell(self.n_states, self.n_hidden), None
         self.pi = torch.nn.Linear(self.n_hidden, self.n_actions)
     
-    def forward(self, *states):
-        state = torch.cat([state for state in states], dim=-1)
+    def forward(self, state):
         self.h = self.cell(state.unsqueeze(0), self.h)
         act = Categorical(F.softmax(self.pi(self.h), dim=-1))
         return ActionDistribution(act), None
@@ -130,8 +127,7 @@ class DiscreteRNNPolicyValue(Parametric):
         self.pi = torch.nn.Linear(self.n_hidden, self.n_actions)
         self.V = torch.nn.Linear(self.n_hidden, 1)
     
-    def forward(self, *states):
-        state = torch.cat([state for state in states], dim=-1)
+    def forward(self, state):
         self.h = self.cell(state.unsqueeze(0), self.h)
         act = Categorical(F.softmax(self.pi(self.h), dim=-1))
         v = self.V(self.h)
