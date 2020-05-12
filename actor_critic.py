@@ -35,9 +35,9 @@ def main( args ):
                 returns = compute_returns(rewards, args.gamma)
                 values, = rollout.others
 
-                advantage = returns - values.detach()
+                advantage = returns - values.detach().squeeze()
                 policyloss = - advantage * logprobs
-                valueloss = 0.5 * advantage.pow(2)
+                valueloss = torch.nn.functional.smooth_l1_loss(values.squeeze(), returns)
                 loss = policyloss.sum() + valueloss.sum()
                 loss /= args.batch_size
                 loss.backward()

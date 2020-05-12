@@ -12,9 +12,9 @@ class Rollout(object):
         super().__init__()
 
         # The internal data containers
-        self.__states, self.__actions, self.__rewards = [], [], []
-        self.__logprobs = []
-        self.__others = []
+        self._states, self._actions, self._rewards = [], [], []
+        self._logprobs = []
+        self._others = []
 
         # If 'device' not provided, go ahead based on availability
         self.device = torch.device('cpu' if torch.cuda.is_available() else 'cpu') if device is None else device
@@ -22,24 +22,24 @@ class Rollout(object):
     @property
     def rewards(self):
         ''' Returns the sequence of rewards (Tensorized) '''
-        return torch.tensor(self.__rewards, device=self.device)
+        return torch.tensor(self._rewards, device=self.device)
 
     @property
     def logprobs(self):
         ''' Returns the sequence of log-probabilities, i.e. log pi(a|s))) (Tensorized) '''
-        return torch.cat(self.__logprobs, dim=-1)
+        return torch.cat(self._logprobs, dim=-1)
 
     @property
     def others(self):
         ''' Extra info per time step (e.g., value) '''
-        n_others = len(self.__others[0])
+        n_others = len(self._others[0])
         if n_others != 0:
-            return tuple(torch.tensor([other[index] for other in self.__others], device=self.device)
-                        for index in range(n_others))
-
+            return tuple(torch.cat([others[index] for others in self._others], dim=0)
+                                            for index in range(n_others))
+    
     def __len__(self):
         ''' Returns the length of the rollout '''
-        return len(self.__states)
+        return len(self._states)
 
     def __iter__(self):
         ''' Iterator Protocol: Iterates over each the experience tuple (s,a,r,..) '''
@@ -49,9 +49,9 @@ class Rollout(object):
     def __next__(self):
         ''' Iterator Protocol: Returns the next experience tuple (s,a,r,..) '''
         if self.t < len(self):
-            s, a, r = self.__states[self.t], self.__actions[self.t], self.__rewards[self.t]
-            logprob = self.__logprobs[self.t]
-            other = self.__others[self.t]
+            s, a, r = self._states[self.t], self._actions[self.t], self._rewards[self.t]
+            logprob = self._logprobs[self.t]
+            other = self._others[self.t]
             self.t += 1
             return (s, a, r), logprob, other
         else:
@@ -59,9 +59,9 @@ class Rollout(object):
 
     def __lshift__(self, rhs):
         ''' Inserts a new experience tuple into the rollout '''
-        state, action, reward, logprob, *other = rhs
-        self.__states.append( state )
-        self.__actions.append( action )
-        self.__rewards.append( reward )
-        self.__logprobs.append( logprob )
-        self.__others.append( other )
+        state, action, reward, logprob, *others = rhs
+        self._states.append( state )
+        self._actions.append( action )
+        self._rewards.append( reward )
+        self._logprobs.append( logprob )
+        self._others.append( others )
