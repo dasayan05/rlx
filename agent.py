@@ -23,7 +23,7 @@ class PGAgent(object):
         self.device = torch.device('cpu' if torch.cuda.is_available() else 'cpu') if device is None else device
 
         # The internal learnable object
-        self.network = self.policy((self.environment.observation_space,), (self.environment.action_space,), n_hidden=128)
+        self.network = self.policy(self.environment.observation_space, (self.environment.action_space,), n_hidden=128)
         if torch.cuda.is_available():
             self.network = self.network.to(device)
 
