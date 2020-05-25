@@ -36,7 +36,11 @@ class Rollout(object):
         if n_others != 0:
             return tuple(torch.cat([others[index] for others in self._others], dim=0)
                                             for index in range(n_others))
-    
+    @property
+    def entropy(self):
+        ''' Returns the sequence of entropy at every timestep '''
+        return torch.cat([d.entropy() for d in self._action_dist])
+
     def __len__(self):
         ''' Returns the length of the rollout '''
         return len(self._states)

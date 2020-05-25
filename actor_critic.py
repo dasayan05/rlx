@@ -34,11 +34,12 @@ def main( args ):
                 rewards, logprobs = rollout.rewards, rollout.logprobs
                 returns = compute_returns(rewards, args.gamma)
                 values, = rollout.others
+                entropyloss = rollout.entropy
 
                 advantage = returns - values.detach().squeeze()
                 policyloss = - advantage * logprobs
                 valueloss = torch.nn.functional.smooth_l1_loss(values.squeeze(), returns)
-                loss = policyloss.sum() + valueloss.sum()
+                loss = policyloss.sum() + valueloss.sum() - 1e-3 * entropyloss.sum()
                 loss /= args.batch_size
                 loss.backward()
             agent.step()

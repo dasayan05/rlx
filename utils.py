@@ -41,3 +41,7 @@ class ActionDistribution(object):
         '''
         assert len(samples) == self.n_dist, "Number of constituent distributions is different than number of samples"
         return sum([d.log_prob(s) for d, s in zip(self.distribs, samples)])
+
+    def entropy(self):
+        ''' Computes entropy of (each component) the ActionDistribution '''
+        return sum([d.entropy() for d in self.distribs])
