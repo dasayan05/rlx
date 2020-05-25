@@ -16,7 +16,7 @@ def main( args ):
     
     # logging object (TensorBoard)
     logger = SummaryWriter(os.path.join(args.base, f'exp/{args.tag}'))
-    
+
     # TQDM Formatting
     TQDMBar = '{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, ' + \
                     'Reward: {postfix[0][r]:>3.2f}, ' + \
@@ -43,7 +43,7 @@ def main( args ):
                 advantage = returns - values.detach().squeeze()
                 policyloss = - advantage * logprobs
                 valueloss = torch.nn.functional.smooth_l1_loss(values.squeeze(), returns)
-                loss = policyloss.sum() + valueloss.sum() - 1e-3 * entropyloss.sum()
+                loss = policyloss.sum() + valueloss.sum() - args.entropy_reg * entropyloss.sum()
                 loss /= args.batch_size
                 loss.backward()
             agent.step()
@@ -70,6 +70,7 @@ if __name__ == '__main__':
     parser.add_argument('--policytype', type=str, required=True, choices=['rnn', 'mlp'], help='Type of policy')
     parser.add_argument('--interval', type=int, required=False, default=10, help='Logging freq')
     parser.add_argument('--batch_size', type=int, required=False, default=8, help='Batch size')
+    parser.add_argument('--entropy_reg', type=float, required=False, default=0., help='Regularizer weight for entropy')
     parser.add_argument('--tag', type=str, required=True, help='Identifier for experiment')
     parser.add_argument('--max_episode', type=int, required=False, default=500, help='Maximum no. of episodes')
     parser.add_argument('--horizon', type=int, required=False, default=1000, help='Maximum no. of timesteps')
