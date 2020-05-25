@@ -13,7 +13,7 @@ class Rollout(object):
 
         # The internal data containers
         self._states, self._actions, self._rewards = [], [], []
-        self._logprobs = []
+        self._action_dist = []
         self._others = []
 
         # If 'device' not provided, go ahead based on availability
@@ -27,8 +27,8 @@ class Rollout(object):
     @property
     def logprobs(self):
         ''' Returns the sequence of log-probabilities, i.e. log pi(a|s))) (Tensorized) '''
-        return torch.cat(self._logprobs, dim=-1)
-
+        return torch.cat([ d.log_prob(*a) for a, d in zip(self._actions, self._action_dist) ])
+    
     @property
     def others(self):
         ''' Extra info per time step (e.g., value) '''
@@ -50,18 +50,18 @@ class Rollout(object):
         ''' Iterator Protocol: Returns the next experience tuple (s,a,r,..) '''
         if self.t < len(self):
             s, a, r = self._states[self.t], self._actions[self.t], self._rewards[self.t]
-            logprob = self._logprobs[self.t]
+            action_dist = self._action_dist[self.t]
             other = self._others[self.t]
             self.t += 1
-            return (s, a, r), logprob, other
+            return (s, a, r), action_dist, other
         else:
             raise StopIteration
 
     def __lshift__(self, rhs):
         ''' Inserts a new experience tuple into the rollout '''
-        state, action, reward, logprob, *others = rhs
+        state, action, reward, action_dist, *others = rhs
         self._states.append( state )
         self._actions.append( action )
         self._rewards.append( reward )
-        self._logprobs.append( logprob )
+        self._action_dist.append( action_dist )
         self._others.append( others )

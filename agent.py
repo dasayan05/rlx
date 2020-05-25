@@ -46,9 +46,8 @@ class PGAgent(object):
         # Transition to new state and retrieve a reward
         st, reward, done, _ = self.environment.step(*[a.item() for a in action])
         next_state = torch.from_numpy(st).float().to(self.device) # update current state
-        logprob = action_dist.log_prob(*action)
 
-        return (action, logprob, reward, next_state, done, *others)
+        return (action, action_dist, reward, next_state, done, *others)
 
     def episode(self, horizon, global_state=None, detach=False, render=(False, 0)):
         '''
@@ -77,8 +76,8 @@ class PGAgent(object):
                 self.environment.render()
                 time.sleep(delay)
             
-            action, logprob, reward, next_state, done, *others = self.timestep(*state_tuple)
-            rollout << (state, action, reward, logprob, *others)
+            action, action_dist, reward, next_state, done, *others = self.timestep(*state_tuple)
+            rollout << (state, action, reward, action_dist, *others)
             state = next_state
             
             if done: break
