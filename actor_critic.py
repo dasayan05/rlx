@@ -9,19 +9,23 @@ from utils import compute_returns
 from policy import DiscreteMLPPolicyValue, DiscreteRNNPolicyValue
 
 def main( args ):
+    environment = gym.make(args.env)
     Policy = DiscreteRNNPolicyValue if args.policytype == 'rnn' else DiscreteMLPPolicyValue
-    agent = PGAgent(gym.make(args.env), Policy, device=torch.device('cuda'))
+    network = Policy(environment.observation_space, (environment.action_space,), n_hidden=128)
+    agent = PGAgent(environment, network, device=torch.device('cuda'))
+    
+    # logging object (TensorBoard)
     logger = SummaryWriter(os.path.join(args.base, f'exp/{args.tag}'))
-
-    # average episodic reward
-    running_reward = 0.
-
+    
     # TQDM Formatting
     TQDMBar = '{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, ' + \
                     'Reward: {postfix[0][r]:>3.2f}, ' + \
                     'Length: {postfix[0][l]:3d}]'
 
     with tqdm(total=args.max_episode, bar_format=TQDMBar, disable=None, postfix=[dict(r=0.,l=0)]) as tqEpisodes:
+        
+        # average episodic reward
+        running_reward = 0.
 
         # loop for many episodes
         for episode in range(args.max_episode):

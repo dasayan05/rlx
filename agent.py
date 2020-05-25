@@ -6,12 +6,12 @@ from rollout import Rollout
 class PGAgent(object):
     """ Encapsulation of an Agent """
 
-    def __init__(self, env, policy, device=None, lr=1e-4):
+    def __init__(self, env, network, device=None, lr=1e-4):
         '''
         Constructs an Agent from and 'env' and 'policy'.
         Arguments:
             env: An environment respecting the 'gym.Environment' API
-            policy: A subclass of the 'policy.Parametric'
+            network: An instance of the 'policy.Parametric'
             device: Default device of operation
             lr: Learning rate (TODO: Make a better interface for optimizers)
         '''
@@ -19,13 +19,10 @@ class PGAgent(object):
 
         # Track arguments
         self.environment = env
-        self.policy = policy
         self.device = torch.device('cpu' if torch.cuda.is_available() else 'cpu') if device is None else device
 
         # The internal learnable object
-        self.network = self.policy(self.environment.observation_space, (self.environment.action_space,), n_hidden=128)
-        if torch.cuda.is_available():
-            self.network = self.network.to(device)
+        self.network = network.to(device)
 
         # Optimizer instance
         self.optimizer = torch.optim.Adam(self.network.parameters(), lr=lr)
