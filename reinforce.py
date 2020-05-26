@@ -5,15 +5,17 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 from agent import PGAgent
-from utils import compute_returns
 from policy import DiscreteMLPPolicy, DiscreteRNNPolicy
+from pgalgo import REINFORCE
 
 def main( args ):
     environment = gym.make(args.env)
     Policy = DiscreteRNNPolicy if args.policytype == 'rnn' else DiscreteMLPPolicy
     network = Policy(environment.observation_space, (environment.action_space,), n_hidden=128)
     agent = PGAgent(environment, network, device=torch.device('cuda'))
-    
+
+    reinforce = REINFORCE(agent)
+
     # logging object (TensorBoard)
     logger = SummaryWriter(os.path.join(args.base, f'exp/{args.tag}'))
 
@@ -29,22 +31,11 @@ def main( args ):
         
         # loop for many episodes
         for episode in range(args.max_episode):
-            avg_length = 0
             
-            agent.zero_grad()
-            for b in range(args.batch_size):
-                rollout = agent.episode(args.horizon, render=(args.render, 0.01))
-                avg_length = ((avg_length * b) + len(rollout)) // (b + 1)
-                rewards, logprobs = rollout.rewards, rollout.logprobs
-                returns = compute_returns(rewards, args.gamma)
+            avg_reward, avg_length = reinforce.train(horizon=args.horizon, batch_size=args.batch_size,
+                gamma=args.gamma)
 
-                policyloss = - returns * logprobs
-                loss = policyloss.sum()
-                loss /= args.batch_size
-                loss.backward()
-            agent.step()
-
-            running_reward = 0.05 * rewards.sum().item() + (1 - 0.05) * running_reward
+            running_reward = 0.05 * avg_reward + (1 - 0.05) * running_reward
             if episode % args.interval == 0:
                 if tqEpisodes.disable:
                     print(f'[{episode:5d}/{args.max_episode}] Running reward: {running_reward:>4.2f}, Avg. Length: {avg_length:3d}')

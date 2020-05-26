@@ -5,14 +5,16 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 from agent import PGAgent
-from utils import compute_returns
 from policy import DiscreteMLPPolicyValue, DiscreteRNNPolicyValue
+from pgalgo import ActorCritic
 
 def main( args ):
     environment = gym.make(args.env)
     Policy = DiscreteRNNPolicyValue if args.policytype == 'rnn' else DiscreteMLPPolicyValue
     network = Policy(environment.observation_space, (environment.action_space,), n_hidden=128)
     agent = PGAgent(environment, network, device=torch.device('cuda'))
+
+    actorcritic = ActorCritic(agent)
     
     # logging object (TensorBoard)
     logger = SummaryWriter(os.path.join(args.base, f'exp/{args.tag}'))
@@ -29,26 +31,11 @@ def main( args ):
 
         # loop for many episodes
         for episode in range(args.max_episode):
-            avg_length = 0
             
-            agent.zero_grad()
-            for b in range(args.batch_size):
-                rollout = agent.episode(args.horizon, render=(args.render, 0.01))
-                avg_length = ((avg_length * b) + len(rollout)) // (b + 1)
-                rewards, logprobs = rollout.rewards, rollout.logprobs
-                returns = compute_returns(rewards, args.gamma)
-                values, = rollout.others
-                entropyloss = rollout.entropy
+            avg_reward, avg_length = actorcritic.train(horizon=args.horizon, batch_size=args.batch_size,
+                entropy_reg=args.entropy_reg, gamma=args.gamma)
 
-                advantage = returns - values.detach().squeeze()
-                policyloss = - advantage * logprobs
-                valueloss = torch.nn.functional.mse_loss(values.squeeze(), returns)
-                loss = policyloss.sum() + valueloss.sum() - args.entropy_reg * entropyloss.sum()
-                loss /= args.batch_size
-                loss.backward()
-            agent.step()
-
-            running_reward = 0.05 * rewards.sum().item() + (1 - 0.05) * running_reward
+            running_reward = 0.05 * avg_reward + (1 - 0.05) * running_reward
             if episode % args.interval == 0:
                 if tqEpisodes.disable:
                     print(f'[{episode:5d}/{args.max_episode}] Running reward: {running_reward:>4.2f}, Avg. Length: {avg_length:3d}')
@@ -68,10 +55,10 @@ if __name__ == '__main__':
     parser.add_argument('--gamma', type=float, required=False, default=0.999, help='Discount factor')
     parser.add_argument('--render', action='store_true', help='Render environment')
     parser.add_argument('--policytype', type=str, required=True, choices=['rnn', 'mlp'], help='Type of policy')
+    parser.add_argument('--tag', type=str, required=True, help='Identifier for experiment')
     parser.add_argument('--interval', type=int, required=False, default=10, help='Logging freq')
     parser.add_argument('--batch_size', type=int, required=False, default=8, help='Batch size')
     parser.add_argument('--entropy_reg', type=float, required=False, default=0., help='Regularizer weight for entropy')
-    parser.add_argument('--tag', type=str, required=True, help='Identifier for experiment')
     parser.add_argument('--max_episode', type=int, required=False, default=500, help='Maximum no. of episodes')
     parser.add_argument('--horizon', type=int, required=False, default=1000, help='Maximum no. of timesteps')
     parser.add_argument('--env', type=str, required=True, help='Gym environment')

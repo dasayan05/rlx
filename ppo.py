@@ -5,15 +5,16 @@ from torch.utils.tensorboard import SummaryWriter
 from tqdm import tqdm
 
 from agent import PGAgent
-from utils import compute_returns
 from policy import DiscreteMLPPolicyValue, DiscreteRNNPolicyValue
+from pgalgo import PPO
 
 def main( args ):
     environment = gym.make(args.env)
     Policy = DiscreteRNNPolicyValue if args.policytype == 'rnn' else DiscreteMLPPolicyValue
     network = Policy(environment.observation_space, (environment.action_space,), n_hidden=128)
-
     agent = PGAgent(environment, network, device=torch.device('cuda'))
+
+    ppo = PPO(agent)
     
     # logging object (TensorBoard)
     logger = SummaryWriter(os.path.join(args.base, f'exp/{args.tag}'))
@@ -30,31 +31,11 @@ def main( args ):
 
         # loop for many episodes
         for episode in range(args.max_episode):
-            base_rollout = agent.episode(args.horizon, render=(args.render, 0.01))
-            base_rewards, base_logprobs = base_rollout.rewards, base_rollout.logprobs
-            base_returns = compute_returns(base_rewards, args.gamma)
             
-            avg_length = len(base_rollout)
+            avg_reward, avg_length = ppo.train(horizon=args.horizon, gamma=args.gamma, entropy_reg=args.entropy_reg,
+                k_epochs=args.k_epochs, clip=args.clip)
 
-            for _ in range(args.k_epochs):
-                rollout = agent.evaluate(base_rollout)
-                logprobs, entropy = rollout.logprobs, rollout.entropy
-                values, = rollout.others
-
-                ratios = (logprobs - base_logprobs.detach()).exp()
-                
-                advantage = base_returns - values.detach().squeeze()
-                policyloss = - torch.min(ratios, torch.clamp(ratios, 1 - args.clip, 1 + args.clip)) * advantage
-                valueloss = torch.nn.functional.mse_loss(values.squeeze(), base_returns)
-                entropyloss = - args.entropy_reg * entropy
-
-                loss = policyloss.sum() + valueloss.sum() + entropyloss.sum()
-                
-                agent.zero_grad()
-                loss.backward()
-                agent.step()
-
-            running_reward = 0.05 * base_rewards.sum().item() + (1 - 0.05) * running_reward
+            running_reward = 0.05 * avg_reward + (1 - 0.05) * running_reward
             if episode % args.interval == 0:
                 if tqEpisodes.disable:
                     print(f'[{episode:5d}/{args.max_episode}] Running reward: {running_reward:>4.2f}, Avg. Length: {avg_length:3d}')
