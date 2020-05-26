@@ -32,19 +32,14 @@ class PGAgent(object):
         return torch.from_numpy(self.environment.reset()).float().to(self.device)
 
     def timestep(self, *states):
-        ''' Given a state-tuple, returns the rest of an experience tuple '''
+        ''' Given a state-tuple, returns the action distribution and any other predicted stuff '''
 
         # Concat the 'global_state', if any.
         full_state = torch.cat([state for state in states], dim=-1)
 
         action_dist, *others = self.network(full_state) # invoke the policy
-        action = action_dist.sample() # sample an action
-        
-        # Transition to new state and retrieve a reward
-        st, reward, done, _ = self.environment.step(*[a.item() for a in action])
-        next_state = torch.from_numpy(st).float().to(self.device) # update current state
 
-        return (action, action_dist, reward, next_state, done, *others)
+        return (action_dist, *others)
 
     def episode(self, horizon, global_state=None, detach=False, render=(False, 0)):
         '''
@@ -73,9 +68,17 @@ class PGAgent(object):
                 self.environment.render()
                 time.sleep(delay)
             
-            action, action_dist, reward, next_state, done, *others = self.timestep(*state_tuple)
-            rollout << (state, action, reward, action_dist, *others)
-            state = next_state
+            action_dist, *others = self.timestep(*state_tuple)
+    
+            action = action_dist.sample() # sample an action
+            
+            # Transition to new state and retrieve a reward
+            next_state, reward, done, _ = self.environment.step(*[a.item() for a in action])
+            next_state = torch.from_numpy(next_state).float().to(self.device)
+            
+            rollout << (state, action, reward, action_dist, *others) # record one experience tuple
+    
+            state = next_state # update current state
             
             if done: break
 
