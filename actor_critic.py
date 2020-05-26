@@ -42,7 +42,7 @@ def main( args ):
 
                 advantage = returns - values.detach().squeeze()
                 policyloss = - advantage * logprobs
-                valueloss = torch.nn.functional.smooth_l1_loss(values.squeeze(), returns)
+                valueloss = torch.nn.functional.mse_loss(values.squeeze(), returns)
                 loss = policyloss.sum() + valueloss.sum() - args.entropy_reg * entropyloss.sum()
                 loss /= args.batch_size
                 loss.backward()

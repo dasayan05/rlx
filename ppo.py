@@ -45,7 +45,7 @@ def main( args ):
                 
                 advantage = base_returns - values.detach().squeeze()
                 policyloss = - torch.min(ratios, torch.clamp(ratios, 1 - args.clip, 1 + args.clip)) * advantage
-                valueloss = torch.nn.functional.smooth_l1_loss(values.squeeze(), base_returns)
+                valueloss = torch.nn.functional.mse_loss(values.squeeze(), base_returns)
                 entropyloss = - args.entropy_reg * entropy
 
                 loss = policyloss.sum() + valueloss.sum() + entropyloss.sum()
