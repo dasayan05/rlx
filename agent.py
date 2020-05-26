@@ -41,6 +41,20 @@ class PGAgent(object):
 
         return (action_dist, *others)
 
+    def evaluate(self, rollout, global_state=None):
+        ''' Given a rollout, evaluate it against current policy '''
+
+        rollout_new = Rollout(device=self.device)
+
+        self.network.reset()
+        for (state, action, reward), _, _ in rollout:
+            state_tuple = (state,) if global_state is None else (state, global_state)
+
+            action_dist, *others = self.timestep(*state_tuple)
+            rollout_new << (state, action, reward, action_dist, *others)
+
+        return rollout_new
+
     def episode(self, horizon, global_state=None, detach=False, render=(False, 0)):
         '''
         Samples and returns an entire rollout (as 'Rollout' instance).
