@@ -48,7 +48,7 @@ def main( args ):
                 loss.backward()
             agent.step()
 
-            running_reward = 0.05 * rewards.sum().detach().item() + (1 - 0.05) * running_reward
+            running_reward = 0.05 * rewards.sum().item() + (1 - 0.05) * running_reward
             if episode % args.interval == 0:
                 if tqEpisodes.disable:
                     print(f'[{episode:5d}/{args.max_episode}] Running reward: {running_reward:>4.2f}, Avg. Length: {avg_length:3d}')
