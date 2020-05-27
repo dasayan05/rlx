@@ -58,8 +58,8 @@ class ActorCritic(object):
 
             advantage = returns - values.detach().squeeze()
             policyloss = - advantage * logprobs
-            valueloss = torch.nn.functional.mse_loss(values.squeeze(), returns)
-            loss = policyloss.sum() + valueloss.sum() - entropy_reg * entropyloss.sum()
+            valueloss = torch.nn.functional.mse_loss(values.squeeze(), returns, reduction='sum')
+            loss = policyloss.sum() + valueloss - entropy_reg * entropyloss.sum()
             loss /= batch_size
             loss.backward()
         
@@ -94,8 +94,8 @@ class A2C(object):
 
             advantage = returns - values.squeeze()
             policyloss = - advantage.detach() * logprobs
-            valueloss = torch.nn.functional.mse_loss(values.squeeze(), returns.detach())
-            loss = policyloss.sum() + valueloss.sum() - entropy_reg * entropyloss.sum()
+            valueloss = torch.nn.functional.mse_loss(values.squeeze(), returns, reduction='sum')
+            loss = policyloss.sum() + valueloss - entropy_reg * entropyloss.sum()
             loss /= batch_size
             loss.backward()
         
@@ -127,10 +127,10 @@ class PPO(object):
             
             advantage = base_returns - values.detach().squeeze()
             policyloss = - torch.min(ratios, torch.clamp(ratios, 1 - clip, 1 + clip)) * advantage
-            valueloss = torch.nn.functional.mse_loss(values.squeeze(), base_returns)
+            valueloss = torch.nn.functional.mse_loss(values.squeeze(), base_returns, reduction='sum')
             entropyloss = - entropy_reg * entropy
 
-            loss = policyloss.sum() + valueloss.sum() + entropyloss.sum()
+            loss = policyloss.sum() + valueloss + entropyloss.sum()
             
             self.agent.zero_grad()
             loss.backward()
