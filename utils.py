@@ -14,6 +14,15 @@ def compute_returns(rewards, gamma = 1.0):
     returns = torch.cat(returns, dim=-1)
     return (returns - returns.mean()) / returns.std()
 
+def compute_bootstrapped_returns(rewards, end_v, gamma = 1.0):
+    returns = []
+    v = end_v
+    for t in reversed(range(len(rewards))):
+        returns.insert(0, rewards[t] + gamma * v)
+        v = returns[0]
+    returns = torch.cat(returns, dim=-1)
+    return (returns - returns.mean()) / returns.std()
+
 class ActionDistribution(object):
     """ Encapsulates a multi-part action distribution """
 
