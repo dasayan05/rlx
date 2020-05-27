@@ -16,7 +16,7 @@ class REINFORCE(object):
         
         self.agent.zero_grad()
         for b in range(batch_size):
-            rollout = self.agent.episode(horizon, render=(render, 0.01))
+            rollout = self.agent.episode(horizon, render=(render, 0.01))[:-1]
             rewards, logprobs = rollout.rewards, rollout.logprobs
             returns = compute_returns(rewards, gamma)
             
@@ -46,7 +46,7 @@ class ActorCritic(object):
             
         self.agent.zero_grad()
         for b in range(batch_size):
-            rollout = self.agent.episode(horizon, render=(render, 0.01))
+            rollout = self.agent.episode(horizon, render=(render, 0.01))[:-1]
             rewards, logprobs = rollout.rewards, rollout.logprobs
             returns = compute_returns(rewards, gamma)
             values, = rollout.others
@@ -75,7 +75,7 @@ class PPO(object):
         self.agent = agent # Track the agent
 
     def train(self, *, horizon, gamma, entropy_reg, k_epochs, clip, render = False):
-        base_rollout = self.agent.episode(horizon, render=(render, 0.01))
+        base_rollout = self.agent.episode(horizon, render=(render, 0.01))[:-1]
         base_rewards, base_logprobs = base_rollout.rewards, base_rollout.logprobs
         base_returns = compute_returns(base_rewards, gamma)
         

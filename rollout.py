@@ -3,7 +3,7 @@ import torch
 class Rollout(object):
     """ Contains and manages one single rollout/episode """
 
-    def __init__(self, device = None):
+    def __init__(self, device = None, ctor = None):
         '''
         Constructs a Rollout object
         Arguments:
@@ -12,12 +12,24 @@ class Rollout(object):
         super().__init__()
 
         # The internal data containers
-        self._states, self._actions, self._rewards = [], [], []
-        self._action_dist = []
-        self._others = []
+        if ctor is None:
+            self._states, self._actions, self._rewards, self._action_dist, self._others = [], [], [], [], []
+        else:
+            self._states, self._actions, self._rewards, self._action_dist, self._others = ctor
 
         # If 'device' not provided, go ahead based on availability
         self.device = torch.device('cpu' if torch.cuda.is_available() else 'cpu') if device is None else device
+
+    def __getitem__(self, index):
+        rollout_ = Rollout(device=self.device, ctor=(
+                    self._states[index],
+                    self._actions[index],
+                    self._rewards[index],
+                    self._action_dist[index],
+                    self._others[index]
+                ))
+
+        return rollout_
 
     @property
     def rewards(self):

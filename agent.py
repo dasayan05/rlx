@@ -96,6 +96,13 @@ class PGAgent(object):
             
             if done: break
 
+        # One last entry for the last state (sometimes required)
+        state_tuple = (state,) if global_state is None else (state, global_state)
+        action_dist, *others = self.timestep(*state_tuple)
+        action = action_dist.sample()
+
+        rollout << (state, action, 0.0, action_dist, *others)
+
         return rollout
 
     def zero_grad(self):
