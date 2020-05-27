@@ -24,7 +24,7 @@ class REINFORCE(object):
             avg_length = ((avg_length * b) + len(rollout)) // (b + 1)
             avg_reward = ((avg_reward * b) + rewards.sum()) // (b + 1)
 
-            policyloss = - returns * logprobs
+            policyloss = - returns.detach() * logprobs
             loss = policyloss.sum()
             loss /= batch_size
             loss.backward()
@@ -56,10 +56,11 @@ class ActorCritic(object):
             avg_length = ((avg_length * b) + len(rollout)) // (b + 1)
             avg_reward = ((avg_reward * b) + rewards.sum()) // (b + 1)
 
-            advantage = returns - values.detach().squeeze()
-            policyloss = - advantage * logprobs
-            valueloss = torch.nn.functional.mse_loss(values.squeeze(), returns, reduction='sum')
-            loss = policyloss.sum() + valueloss - entropy_reg * entropyloss.sum()
+            advantage = returns - values.squeeze()
+            advantage = (advantage - advantage.mean()) / advantage.std()
+            policyloss = - advantage.detach() * logprobs
+            valueloss = advantage.pow(2)
+            loss = policyloss.sum() + valueloss.sum() - entropy_reg * entropyloss.sum()
             loss /= batch_size
             loss.backward()
         
@@ -77,7 +78,7 @@ class A2C(object):
     def train(self, *, horizon, batch_size, gamma, entropy_reg, render = False):
         avg_length = 0
         avg_reward = 0.
-            
+        
         self.agent.zero_grad()
         for b in range(batch_size):
             rollout = self.agent.episode(horizon, render=(render, 0.01))
@@ -93,9 +94,10 @@ class A2C(object):
             avg_reward = ((avg_reward * b) + rewards.sum()) // (b + 1)
 
             advantage = returns - values.squeeze()
+            advantage = (advantage - advantage.mean()) / advantage.std()
             policyloss = - advantage.detach() * logprobs
-            valueloss = torch.nn.functional.mse_loss(values.squeeze(), returns, reduction='sum')
-            loss = policyloss.sum() + valueloss - entropy_reg * entropyloss.sum()
+            valueloss = advantage.pow(2)
+            loss = policyloss.sum() + valueloss.sum() - entropy_reg * entropyloss.sum()
             loss /= batch_size
             loss.backward()
         
@@ -125,12 +127,13 @@ class PPO(object):
 
             ratios = (logprobs - base_logprobs.detach()).exp()
             
-            advantage = base_returns - values.detach().squeeze()
-            policyloss = - torch.min(ratios, torch.clamp(ratios, 1 - clip, 1 + clip)) * advantage
-            valueloss = torch.nn.functional.mse_loss(values.squeeze(), base_returns, reduction='sum')
+            advantage = base_returns - values.squeeze()
+            advantage = (advantage - advantage.mean()) / advantage.std()
+            policyloss = - torch.min(ratios, torch.clamp(ratios, 1 - clip, 1 + clip)) * advantage.detach()
+            valueloss = advantage.pow(2)
             entropyloss = - entropy_reg * entropy
 
-            loss = policyloss.sum() + valueloss + entropyloss.sum()
+            loss = policyloss.sum() + valueloss.sum() + entropyloss.sum()
             
             self.agent.zero_grad()
             loss.backward()
