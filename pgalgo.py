@@ -137,6 +137,6 @@ class PPO(object):
             
             self.agent.zero_grad()
             loss.backward()
-            self.agent.step()
+            self.agent.step(clip=None)
 
         return avg_reward, avg_length
