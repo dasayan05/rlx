@@ -114,6 +114,6 @@ class PGAgent(object):
         
         # Optional gradient clipping
         if clip is not None:
-            torch.nn.utils.clip_grad_norm(self.optimizer.parameters(), clip)
+            torch.nn.utils.clip_grad_norm_(self.network.parameters(), clip)
         
         self.optimizer.step()
