@@ -58,7 +58,7 @@ if __name__ == '__main__':
     parser.add_argument('--tag', type=str, required=True, help='Identifier for experiment')
     parser.add_argument('--interval', type=int, required=False, default=10, help='Logging freq')
     parser.add_argument('--batch_size', type=int, required=False, default=8, help='Batch size')
-    parser.add_argument('--entropy_reg', type=float, required=False, default=0., help='Regularizer weight for entropy')
+    parser.add_argument('--entropy_reg', type=float, required=False, default=0.01, help='Regularizer weight for entropy')
     parser.add_argument('--max_episode', type=int, required=False, default=500, help='Maximum no. of episodes')
     parser.add_argument('--horizon', type=int, required=False, default=1000, help='Maximum no. of timesteps')
     parser.add_argument('--env', type=str, required=True, help='Gym environment')

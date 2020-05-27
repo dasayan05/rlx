@@ -57,7 +57,7 @@ if __name__ == '__main__':
     parser.add_argument('--policytype', type=str, required=True, choices=['rnn', 'mlp'], help='Type of policy')
     parser.add_argument('--interval', type=int, required=False, default=10, help='Logging freq')
     parser.add_argument('-K', '--k_epochs', type=int, required=False, default=8, help='How many iterations of trusted updates')
-    parser.add_argument('--entropy_reg', type=float, required=False, default=0., help='Regularizer weight for entropy')
+    parser.add_argument('--entropy_reg', type=float, required=False, default=0.01, help='Regularizer weight for entropy')
     parser.add_argument('--clip', type=float, required=False, default=0.2, help='PPO clipping parameter (usually 0.2)')
     parser.add_argument('--tag', type=str, required=True, help='Identifier for experiment')
     parser.add_argument('--max_episode', type=int, required=False, default=500, help='Maximum no. of episodes')
