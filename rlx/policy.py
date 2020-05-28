@@ -5,7 +5,7 @@ import torch.nn.functional as F
 import torch.distributions as dist
 from torch.distributions import Categorical
 
-from utils import ActionDistribution
+from .utils import ActionDistribution
 
 class Parametric(nn.Module):
     """

@@ -1,7 +1,7 @@
 import abc, time
 import torch
 
-from rollout import Rollout
+from .rollout import Rollout
 
 class PGAgent(object):
     """ Encapsulation of an Agent """
