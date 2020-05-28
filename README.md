@@ -1,5 +1,4 @@
 # rlx: A modular and generic Deep RL library
----
 
 ### Introcution
 
