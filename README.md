@@ -17,19 +17,19 @@ base_rewards, base_logprobs = base_rollout.rewards, base_rollout.logprobs # 'rew
 base_returns = compute_returns(base_rewards, gamma) # Monte-carlo estimates of 'returns'
 
 for _ in range(k_epochs):
-	rollout = agent.evaluate(base_rollout) # 'evaluate' an episode against a policy and get a new 'Rollout' object
-	logprobs, entropy = rollout.logprobs, rollout.entropy # get 'logprobs' and 'entropy' for all timesteps
-	values, = rollout.others # .. also 'value' estimates
-	
-	ratios = (logprobs - base_logprobs.detach()).exp()
-	advantage = base_returns - values.squeeze()
-	policyloss = - torch.min(ratios, torch.clamp(ratios, 1 - clip, 1 + clip)) * advantage.detach()
-	valueloss = advantage.pow(2)
-	entropyloss = - entropy_reg * entropy
-	loss = policyloss.sum() + valueloss.sum() + entropyloss.sum()
-	agent.zero_grad()
-	loss.backward()
-	agent.step()
+    rollout = agent.evaluate(base_rollout) # 'evaluate' an episode against a policy and get a new 'Rollout' object
+    logprobs, entropy = rollout.logprobs, rollout.entropy # get 'logprobs' and 'entropy' for all timesteps
+    values, = rollout.others # .. also 'value' estimates
+
+    ratios = (logprobs - base_logprobs.detach()).exp()
+    advantage = base_returns - values.squeeze()
+    policyloss = - torch.min(ratios, torch.clamp(ratios, 1 - clip, 1 + clip)) * advantage.detach()
+    valueloss = advantage.pow(2)
+    entropyloss = - entropy_reg * entropy
+    loss = policyloss.sum() + valueloss.sum() + entropyloss.sum()
+    agent.zero_grad()
+    loss.backward()
+    agent.step()
 ```
 
 This is all you have to write to get PPO running. Its extremely easy to make manual engineering into the algorithms. The design is centered around the primary data structure "Rollout" which holds a sequence of experience tuples containing action distributions, value-estimates and internally keeps track of the computation graph. Right now it only has 4 Policy Gradient algorithms
