@@ -27,7 +27,6 @@ class ActorCritic(object):
             avg_reward = ((avg_reward * b) + rewards.sum()) // (b + 1)
 
             advantage = returns - values.squeeze()
-            advantage = (advantage - advantage.mean()) / advantage.std()
             policyloss = - advantage.detach() * logprobs
             valueloss = advantage.pow(2)
             loss = policyloss.sum() + valueloss.sum() - entropy_reg * entropyloss.sum()
@@ -67,7 +66,6 @@ class A2C(object):
             avg_reward = ((avg_reward * b) + rewards.sum()) // (b + 1)
 
             advantage = returns - values.squeeze()
-            advantage = (advantage - advantage.mean()) / advantage.std()
             policyloss = - advantage.detach() * logprobs
             valueloss = advantage.pow(2)
             loss = policyloss.sum() + valueloss.sum() - entropy_reg * entropyloss.sum()

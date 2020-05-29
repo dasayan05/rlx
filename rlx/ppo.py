@@ -28,7 +28,7 @@ class PPO(object):
             ratios = (logprobs - base_logprobs.detach()).exp()
             
             advantage = base_returns - values.squeeze()
-            advantage = (advantage - advantage.mean()) / advantage.std()
+            # advantage = (advantage - advantage.mean()) / advantage.std()
             policyloss = - torch.min(ratios, torch.clamp(ratios, 1 - clip, 1 + clip)) * advantage.detach()
             valueloss = advantage.pow(2)
             entropyloss = - entropy_reg * entropy
