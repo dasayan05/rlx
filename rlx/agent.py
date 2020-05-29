@@ -101,6 +101,8 @@ class PGAgent(object):
             
             if done: break
 
+        self.environment.close()
+
         # One last entry for the last state (sometimes required)
         state_tuple = (state,) if global_network_state is None else (state, global_network_state)
         action_dist, *others = self.timestep(*state_tuple)
