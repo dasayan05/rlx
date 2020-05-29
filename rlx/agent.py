@@ -2,34 +2,40 @@ import abc, time
 import torch
 
 from .rollout import Rollout
+from .env import Environment
+from .policy import Parametric
 
 class PGAgent(object):
     """ Encapsulation of an Agent """
 
-    def __init__(self, env, network, device=None, lr=1e-4):
+    def __init__(self, env, policy, policy_kwargs={}, device=None, lr=1e-4):
         '''
         Constructs an Agent from and 'env' and 'policy'.
         Arguments:
-            env: An environment respecting the 'gym.Environment' API
-            network: An instance of the 'policy.Parametric'
+            env: An environment respecting the 'env.Environment' API
+            policy: A subclass of the 'policy.Parametric'
             device: Default device of operation
             lr: Learning rate (TODO: Make a better interface for optimizers)
+            policy_kwargs: kwargs that go into 'policy' instantiation
         '''
         super().__init__()
 
         # Track arguments
+        assert isinstance(env, Environment), "env object must be an instance of 'env.Environment'"
         self.environment = env
         self.device = torch.device('cpu' if torch.cuda.is_available() else 'cpu') if device is None else device
 
         # The internal learnable object
-        self.network = network.to(device)
+        assert issubclass(policy, Parametric), "policy must be a subclass of 'policy.Parametric'"
+        self.network = policy(self.environment.observation_space, self.environment.action_spaces, **policy_kwargs)
+        self.network = self.network.to(self.device)
 
         # Optimizer instance
-        self.optimizer = torch.optim.Adam(self.network.parameters(), lr=lr)
+        self.optimizer = torch.optim.Adam(self.network.parameters(), lr=1e-4)
 
-    def reset(self):
+    def reset(self, global_state=None):
         ''' Resets the environment and returns an initial state '''
-        return torch.from_numpy(self.environment.reset()).float().to(self.device)
+        return torch.from_numpy(self.environment.reset(global_state=global_state)).float().to(self.device)
 
     def timestep(self, *states):
         ''' Given a state-tuple, returns the action distribution and any other predicted stuff '''
@@ -41,40 +47,39 @@ class PGAgent(object):
 
         return (action_dist, *others)
 
-    def evaluate(self, rollout, global_state=None):
+    def evaluate(self, rollout, global_network_state=None):
         ''' Given a rollout, evaluate it against current policy '''
 
         rollout_new = Rollout(device=self.device)
 
         self.network.reset()
         for (state, action, reward), _, _ in rollout:
-            state_tuple = (state,) if global_state is None else (state, global_state)
+            state_tuple = (state,) if global_network_state is None else (state, global_network_state)
 
             action_dist, *others = self.timestep(*state_tuple)
             rollout_new << (state, action, reward, action_dist, *others)
 
         return rollout_new
 
-    def episode(self, horizon, global_state=None, detach=False, render=(False, 0)):
+    def episode(self, horizon, global_network_state=None, global_env_state=None, render=(False, 0)):
         '''
         Samples and returns an entire rollout (as 'Rollout' instance).
         Arguments:
             horizon: Maximum length of the episode.
             global_state: A global state for the whole episode. (TODO: Look into this interface)
-            detach: TODO: Yet to implement a better interface for detaching.
             render: A 2-tuple (bool, float) containing whether want to render and an optional time delay
         '''
 
         ep_reward = 0 # total reward for full episode
 
-        state = self.reset() # prepares for a new episode
+        state = self.reset(global_state=global_env_state) # prepares for a new episode
         self.network.reset()
 
         rollout = Rollout(device=self.device)
 
         # loop for many time-steps
         for t in range(horizon):
-            state_tuple = (state,) if global_state is None else (state, global_state)
+            state_tuple = (state,) if global_network_state is None else (state, global_network_state)
             
             # Rendering (with optional time delay)
             is_render, delay = render
@@ -87,7 +92,7 @@ class PGAgent(object):
             action = action_dist.sample() # sample an action
             
             # Transition to new state and retrieve a reward
-            next_state, reward, done, _ = self.environment.step(*[a.item() for a in action])
+            next_state, reward, done, _ = self.environment.step(*[a.to(torch.device('cpu')).numpy() for a in action])
             next_state = torch.from_numpy(next_state).float().to(self.device)
             
             rollout << (state, action, reward, action_dist, *others) # record one experience tuple
@@ -97,7 +102,7 @@ class PGAgent(object):
             if done: break
 
         # One last entry for the last state (sometimes required)
-        state_tuple = (state,) if global_state is None else (state, global_state)
+        state_tuple = (state,) if global_network_state is None else (state, global_network_state)
         action_dist, *others = self.timestep(*state_tuple)
         action = action_dist.sample()
 

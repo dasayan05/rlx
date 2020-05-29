@@ -8,7 +8,7 @@ class REINFORCE(object):
         self.agent = agent # Track the agent
 
     # def train(self, *, horizon, batch_size, gamma, render = False):
-    def train(self, **kwargs):
+    def train(self, global_network_state = None, global_env_state = None, **kwargs):
         horizon, batch_size, gamma, render = kwargs['horizon'], kwargs['batch_size'], kwargs['gamma'], kwargs['render']
         
         avg_length = 0
@@ -16,7 +16,7 @@ class REINFORCE(object):
         
         self.agent.zero_grad()
         for b in range(batch_size):
-            rollout = self.agent.episode(horizon, render=(render, 0.01))[:-1]
+            rollout = self.agent.episode(horizon, global_network_state, global_env_state, render=(render, 0.01))[:-1]
             rewards, logprobs = rollout.rewards, rollout.logprobs
             returns = compute_returns(rewards, gamma)
             

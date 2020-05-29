@@ -9,11 +9,11 @@ class PPO(object):
         super().__init__()
         self.agent = agent # Track the agent
 
-    def train(self, **kwargs):
+    def train(self, global_network_state = None, global_env_state = None, **kwargs):
         horizon, gamma, entropy_reg, k_epochs, clip, render = kwargs['horizon'], kwargs['gamma'], \
                 kwargs['entropy_reg'], kwargs['ppo_k'], kwargs['ppo_clip'], kwargs['render']
 
-        base_rollout = self.agent.episode(horizon, render=(render, 0.01))[:-1]
+        base_rollout = self.agent.episode(horizon, global_network_state, global_env_state, render=(render, 0.01))[:-1]
         base_rewards, base_logprobs = base_rollout.rewards, base_rollout.logprobs
         base_returns = compute_returns(base_rewards, gamma)
         

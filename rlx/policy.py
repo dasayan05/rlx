@@ -1,5 +1,5 @@
 import abc
-import torch
+import torch, gym
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.distributions as dist
@@ -23,8 +23,8 @@ class Parametric(nn.Module):
 
         assert isinstance(action_spaces, tuple), "There must be a list (potentially singleton) of action spaces"
 
-        self.n_state = observation_space.shape[0]
-        self.n_actions = tuple(act_space.n for act_space in action_spaces)
+        self.observation_space = observation_space
+        self.action_spaces = action_spaces
 
     @abc.abstractmethod
     def forward(self, state):
@@ -40,10 +40,12 @@ class DiscreteMLPPolicy(Parametric):
         ''' Constructs every learnable item from environment specifications. '''
 
         super().__init__(observation_space, action_spaces)
-        assert len(self.n_actions) == 1, "(Temporary) Only one action per timestep"
+        assert len(self.action_spaces) == 1, "Only one action component"
+        assert isinstance(self.action_spaces[0], gym.spaces.Discrete), "Only discrete action allowed"
 
         # Track arguments for further use
-        self.n_action, = self.n_actions
+        self.n_state = self.observation_space.shape[0]
+        self.n_action = self.action_spaces[0].n
         self.n_hidden = n_hidden
 
         # Layer definitions
@@ -62,10 +64,12 @@ class DiscreteMLPPolicyValue(Parametric):
         ''' Constructs every learnable item from environment specifications. '''
 
         super().__init__(observation_space, action_spaces)
-        assert len(self.n_actions) == 1, "(Temporary) Only one action per timestep"
+        assert len(self.action_spaces) == 1, "Only one action component"
+        assert isinstance(self.action_spaces[0], gym.spaces.Discrete), "Only discrete action allowed"
 
         # Track arguments for further use
-        self.n_action, = self.n_actions
+        self.n_state = self.observation_space.shape[0]
+        self.n_action = self.action_spaces[0].n
         self.n_hidden = n_hidden
 
         # Layer definitions
@@ -86,10 +90,12 @@ class DiscreteRNNPolicy(Parametric):
         ''' Constructs every learnable item from environment specifications. '''
 
         super().__init__(observation_space, action_spaces)
-        assert len(self.n_actions) == 1, "(Temporary) Only one observation and action per timestep"
+        assert len(self.action_spaces) == 1, "Only one action component"
+        assert isinstance(self.action_spaces[0], gym.spaces.Discrete), "Only discrete action allowed"
 
         # Track arguments for further use
-        self.n_action, = self.n_actions
+        self.n_state = self.observation_space.shape[0]
+        self.n_action = self.action_spaces[0].n
         self.n_hidden = n_hidden
 
         # Layer definitions
@@ -111,10 +117,12 @@ class DiscreteRNNPolicyValue(Parametric):
         ''' Constructs every learnable item from environment specifications. '''
 
         super().__init__(observation_space, action_spaces)
-        assert len(self.n_actions) == 1, "(Temporary) Only one action per timestep"
+        assert len(self.action_spaces) == 1, "Only one action component"
+        assert isinstance(self.action_spaces[0], gym.spaces.Discrete), "Only discrete action allowed"
 
         # Track arguments for further use
-        self.n_action, = self.n_actions
+        self.n_state = self.observation_space.shape[0]
+        self.n_action = self.action_spaces[0].n
         self.n_hidden = n_hidden
 
         # Layer definitions

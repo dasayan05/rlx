@@ -7,6 +7,7 @@ from rlx.policy import (DiscreteMLPPolicyValue,
                         DiscreteRNNPolicyValue,
                         DiscreteMLPPolicy,
                         DiscreteRNNPolicy)
+from rlx.env import (CartPolev0, CartPolev1)
 
 PGAlgos = {
     'rf': REINFORCE,
@@ -15,15 +16,19 @@ PGAlgos = {
     'ppo': PPO
 }
 
+GYMEnvs = {
+    'CartPole-v0': CartPolev0,
+    'CartPole-v1': CartPolev1
+}
+
 def main( args ):
     from torch.utils.tensorboard import SummaryWriter
 
-    environment = gym.make(args.env)
+    environment = GYMEnvs[args.env]()
     Policy = (DiscreteRNNPolicyValue if args.algo != 'rf' else DiscreteRNNPolicy) if args.policytype == 'rnn' else \
                 (DiscreteMLPPolicyValue if args.algo != 'rf' else DiscreteMLPPolicy)
 
-    network = Policy(environment.observation_space, (environment.action_space,), n_hidden=128)
-    agent = PGAgent(environment, network, device=torch.device('cuda'))
+    agent = PGAgent(environment, Policy, policy_kwargs={'n_hidden': 256}, device=torch.device('cuda'))
 
     algorithm = PGAlgos[args.algo](agent)
     train_args = {
@@ -86,7 +91,7 @@ if __name__ == '__main__':
     parser.add_argument('--ppo_clip', type=float, required=False, default=0.2, help='PPO clipping parameter (usually 0.2)')
     parser.add_argument('--max_episode', type=int, required=False, default=1000, help='Maximum no. of episodes')
     parser.add_argument('--horizon', type=int, required=False, default=500, help='Maximum no. of timesteps')
-    parser.add_argument('--env', type=str, required=True, help='Gym environment name (string)')
+    parser.add_argument('--env', type=str, required=True, choices=['CartPole-v0', 'CartPole-v1'], help='Gym environment name (string)')
 
     args = parser.parse_args()
     main( args )

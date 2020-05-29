@@ -7,7 +7,7 @@ class ActorCritic(object):
         super().__init__()
         self.agent = agent # Track the agent
 
-    def train(self, **kwargs):
+    def train(self, global_network_state = None, global_env_state = None, **kwargs):
         horizon, batch_size, gamma, entropy_reg, render = kwargs['horizon'], kwargs['batch_size'], \
                     kwargs['gamma'], kwargs['entropy_reg'], kwargs['render']
         
@@ -16,7 +16,7 @@ class ActorCritic(object):
             
         self.agent.zero_grad()
         for b in range(batch_size):
-            rollout = self.agent.episode(horizon, render=(render, 0.01))[:-1]
+            rollout = self.agent.episode(horizon, global_network_state, global_env_state, render=(render, 0.01))[:-1]
             rewards, logprobs = rollout.rewards, rollout.logprobs
             returns = compute_returns(rewards, gamma)
             values, = rollout.others
@@ -45,7 +45,7 @@ class A2C(object):
         super().__init__()
         self.agent = agent # Track the agent
 
-    def train(self, **kwargs):
+    def train(self, global_network_state = None, global_env_state = None, **kwargs):
         horizon, batch_size, gamma, entropy_reg, render = kwargs['horizon'], kwargs['batch_size'], \
                     kwargs['gamma'], kwargs['entropy_reg'], kwargs['render']
 
@@ -54,7 +54,7 @@ class A2C(object):
         
         self.agent.zero_grad()
         for b in range(batch_size):
-            rollout = self.agent.episode(horizon, render=(render, 0.01))
+            rollout = self.agent.episode(horizon, global_network_state, global_env_state, render=(render, 0.01))
             end_v, = rollout[-1].others
             rollout = rollout[:-1]
             rewards, logprobs = rollout.rewards, rollout.logprobs
