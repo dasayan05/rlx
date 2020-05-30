@@ -38,7 +38,8 @@ def main( args ):
         'ppo_k': args.ppo_k_epochs,
         'batch_size': args.batch_size,
         'ppo_clip': args.ppo_clip,
-        'render': args.render
+        'render': args.render,
+        'standardize_return': True
     }
     
     # logging object (TensorBoard)

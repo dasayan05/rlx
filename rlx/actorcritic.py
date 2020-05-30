@@ -8,9 +8,9 @@ class ActorCritic(object):
         self.agent = agent # Track the agent
 
     def train(self, global_network_state, global_env_state, *, horizon, batch_size=4, gamma=0.99, entropy_reg=1e-2, render=False, **kwargs):
-        avg_length = 0
-        avg_reward = 0.
-            
+        standardize = False if 'standardize_return' not in kwargs.keys() else kwargs['standardize_return']
+        
+        avg_length, avg_reward = 0., 0.
         self.agent.zero_grad()
         for b in range(batch_size):
             rollout = self.agent.episode(horizon, global_network_state, global_env_state, render=(render, 0.01))[:-1]
@@ -24,6 +24,9 @@ class ActorCritic(object):
             avg_reward = ((avg_reward * b) + rewards.sum()) // (b + 1)
 
             advantage = returns - values.squeeze()
+            if standardize and advantage.numel() != 1:
+                advantage = (advantage - advantage.mean()) / advantage.std()
+
             policyloss = - advantage.detach() * logprobs
             valueloss = advantage.pow(2)
             loss = policyloss.sum() + valueloss.sum() - entropy_reg * entropyloss.sum()
@@ -42,9 +45,9 @@ class A2C(object):
         self.agent = agent # Track the agent
 
     def train(self, global_network_state, global_env_state, *, horizon, batch_size=4, gamma=0.99, entropy_reg=1e-2, render=False, **kwargs):
-        avg_length = 0
-        avg_reward = 0.
-        
+        standardize = False if 'standardize_return' not in kwargs.keys() else kwargs['standardize_return']
+
+        avg_length, avg_reward = 0., 0.
         self.agent.zero_grad()
         for b in range(batch_size):
             rollout = self.agent.episode(horizon, global_network_state, global_env_state, render=(render, 0.01))
@@ -60,6 +63,9 @@ class A2C(object):
             avg_reward = ((avg_reward * b) + rewards.sum()) // (b + 1)
 
             advantage = returns - values.squeeze()
+            if standardize and advantage.numel() != 1:
+                advantage = (advantage - advantage.mean()) / advantage.std()
+
             policyloss = - advantage.detach() * logprobs
             valueloss = advantage.pow(2)
             loss = policyloss.sum() + valueloss.sum() - entropy_reg * entropyloss.sum()

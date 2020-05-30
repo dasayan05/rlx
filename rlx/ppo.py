@@ -11,6 +11,8 @@ class PPO(object):
 
     def train(self, global_network_state, global_env_state, *, horizon, gamma=0.99, entropy_reg=1e-2, render=False,
                 k_epochs=4, ppo_clip=0.2, **kwargs):
+        standardize = False if 'standardize_return' not in kwargs.keys() else kwargs['standardize_return']
+        
         base_rollout = self.agent.episode(horizon, global_network_state, global_env_state, render=(render, 0.01))[:-1]
         base_rewards, base_logprobs = base_rollout.rewards, base_rollout.logprobs
         base_returns = compute_returns(base_rewards, gamma)
@@ -26,7 +28,9 @@ class PPO(object):
             ratios = (logprobs - base_logprobs.detach()).exp()
             
             advantage = base_returns - values.squeeze()
-            # advantage = (advantage - advantage.mean()) / advantage.std()
+            if standardize and advantage.numel() != 1:
+                advantage = (advantage - advantage.mean()) / advantage.std()
+
             policyloss = - torch.min(ratios, torch.clamp(ratios, 1 - ppo_clip, 1 + ppo_clip)) * advantage.detach()
             valueloss = advantage.pow(2)
             entropyloss = - entropy_reg * entropy
