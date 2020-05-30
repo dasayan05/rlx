@@ -49,7 +49,7 @@ def main( args ):
     # TQDM Formatting
     TQDMBar = '{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, ' + \
                     'Reward: {postfix[0][r]:>3.2f}, ' + \
-                    'Length: {postfix[0][l]:3d}]'
+                    'Length: {postfix[0][l]:>3.2f}]'
 
     with tqdm(total=args.max_episode, bar_format=TQDMBar, disable=None, postfix=[dict(r=0.,l=0)]) as tqEpisodes:
         
