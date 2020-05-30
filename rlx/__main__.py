@@ -33,7 +33,7 @@ def main( args ):
     Policy = (DiscreteRNNPolicyValue if args.algo != 'rf' else DiscreteRNNPolicy) if args.policytype == 'rnn' else \
                 (DiscreteMLPPolicyValue if args.algo != 'rf' else DiscreteMLPPolicy)
 
-    agent = PGAgent(environment, Policy, policy_kwargs={'n_hidden': 256}, device=torch.device('cuda'))
+    agent = PGAgent(environment, Policy, policy_kwargs={'n_hidden': 256}, device=torch.device('cuda'), lr=args.lr)
 
     algorithm = PGAlgos[args.algo](agent)
     train_args = {
@@ -100,6 +100,7 @@ if __name__ == '__main__':
     parser.add_argument('--horizon', type=int, required=False, default=500, help='Maximum no. of timesteps')
     parser.add_argument('--grad_clip', type=float, required=False, default=0., help='Gradient clipping (0 means no clipping)')
     parser.add_argument('--standardize_return', action='store_true', help='standardize all returns/advantages')
+    parser.add_argument('--lr', type=float, required=False, default=1e-4, help='Learning rate')
     parser.add_argument('--env', type=str, required=True, choices=['CartPole-v0', 'CartPole-v1', 'IncompleteCartPole-v0'], help='Gym environment name (string)')
 
     args = parser.parse_args()
