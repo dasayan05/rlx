@@ -70,7 +70,7 @@ def main( args ):
             running_reward = 0.05 * avg_reward + (1 - 0.05) * running_reward
             if episode % args.interval == 0:
                 if tqEpisodes.disable:
-                    print(f'[{episode:5d}/{args.max_episode}] Running reward: {running_reward:>4.2f}, Avg. Length: {avg_length:3d}')
+                    print(f'[{episode:5d}/{args.max_episode}] Running reward: {running_reward:>4.2f}, Avg. Length: {avg_length:>3.2f}')
                 if len(args.tbdir) != 0:
                     logger.add_scalar('reward', running_reward, global_step=episode)
                     logger.add_scalar('length', avg_length, global_step=episode)
