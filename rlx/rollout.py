@@ -65,11 +65,11 @@ class Rollout(object):
     def __next__(self):
         ''' Iterator Protocol: Returns the next experience tuple (s,a,r,..) '''
         if self.t < len(self):
-            s, a, r = self._states[self.t], self._actions[self.t], self._rewards[self.t]
+            (rs, s), a, r = self._states[self.t], self._actions[self.t], self._rewards[self.t]
             action_dist = self._action_dist[self.t]
             other = self._others[self.t]
             self.t += 1
-            return (s, a, r), action_dist, other
+            return ((rs, s), a, r), action_dist, other
         else:
             raise StopIteration
 

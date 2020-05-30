@@ -37,27 +37,21 @@ class PGAgent(object):
         ''' Resets the environment and returns an initial state '''
         return torch.from_numpy(self.environment.reset(global_state=global_state)).float().to(self.device)
 
-    def timestep(self, *states):
+    def timestep(self, recurr_state, full_state):
         ''' Given a state-tuple, returns the action distribution and any other predicted stuff '''
 
-        # Concat the 'global_state', if any.
-        full_state = torch.cat([state for state in states], dim=-1)
+        next_recurr_state, action_dist, *others = self.network(recurr_state, full_state) # invoke the policy
 
-        action_dist, *others = self.network(full_state) # invoke the policy
+        return (next_recurr_state, action_dist, *others)
 
-        return (action_dist, *others)
-
-    def evaluate(self, rollout, global_network_state=None):
+    def evaluate(self, rollout):
         ''' Given a rollout, evaluate it against current policy '''
 
         rollout_new = Rollout(device=self.device)
 
-        self.network.reset()
-        for (state, action, reward), _, _ in rollout:
-            state_tuple = (state,) if global_network_state is None else (state, global_network_state)
-
-            action_dist, *others = self.timestep(*state_tuple)
-            rollout_new << (state, action, reward, action_dist, *others)
+        for ((recur_state, full_state), action, reward), _, _ in rollout:
+            _, action_dist, *others = self.timestep(recur_state, full_state)
+            rollout_new << ((recur_state, full_state), action, reward, action_dist, *others)
 
         return rollout_new
 
@@ -73,13 +67,13 @@ class PGAgent(object):
         ep_reward = 0 # total reward for full episode
 
         state = self.reset(global_state=global_env_state) # prepares for a new episode
-        self.network.reset()
+        recurr_state = global_network_state
 
         rollout = Rollout(device=self.device)
 
         # loop for many time-steps
         for t in range(horizon):
-            state_tuple = (state,) if global_network_state is None else (state, global_network_state)
+            full_state = torch.cat([state,] if global_network_state is None else [state, global_network_state], dim=-1)
             
             # Rendering (with optional time delay)
             is_render, delay = render
@@ -87,28 +81,28 @@ class PGAgent(object):
                 self.environment.render()
                 time.sleep(delay)
             
-            action_dist, *others = self.timestep(*state_tuple)
-    
+            next_recurr_state, action_dist, *others = self.timestep(recurr_state, full_state)
             action = action_dist.sample() # sample an action
             
             # Transition to new state and retrieve a reward
             next_state, reward, done, _ = self.environment.step(*[a.to(torch.device('cpu')).numpy() for a in action])
             next_state = torch.from_numpy(next_state).float().to(self.device)
             
-            rollout << (state, action, reward, action_dist, *others) # record one experience tuple
+            rollout << ((recurr_state, full_state), action, reward, action_dist, *others) # record one experience tuple
     
             state = next_state # update current state
+            recurr_state = next_recurr_state # update current recurrent state
             
             if done: break
 
         self.environment.close()
 
         # One last entry for the last state (sometimes required)
-        state_tuple = (state,) if global_network_state is None else (state, global_network_state)
-        action_dist, *others = self.timestep(*state_tuple)
+        full_state = torch.cat([state,] if global_network_state is None else [state, global_network_state], dim=-1)
+        _, action_dist, *others = self.timestep(recurr_state, full_state)
         action = action_dist.sample()
 
-        rollout << (state, action, 0.0, action_dist, *others)
+        rollout << ((recurr_state, full_state), action, 0.0, action_dist, *others) # R = 0.0 is dummy, TODO: DO something
 
         return rollout
 

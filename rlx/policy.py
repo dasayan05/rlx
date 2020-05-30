@@ -27,10 +27,7 @@ class Parametric(nn.Module):
         self.action_spaces = action_spaces
 
     @abc.abstractmethod
-    def forward(self, state):
-        pass
-
-    def reset(self):
+    def forward(self, *states):
         pass
 
 class DiscreteMLPPolicy(Parametric):
@@ -52,10 +49,11 @@ class DiscreteMLPPolicy(Parametric):
         self.affine = torch.nn.Linear(self.n_state, self.n_hidden)
         self.pi = torch.nn.Linear(self.n_hidden, self.n_action)
 
-    def forward(self, state):
+    def forward(self, *states):
+        _, state = states
         h = F.relu(self.affine(state.unsqueeze(0)))
         act = Categorical(F.softmax(self.pi(h), dim=-1))
-        return ActionDistribution(act), None
+        return None, ActionDistribution(act), None
 
 class DiscreteMLPPolicyValue(Parametric):
     """ Feed forward (policy + value) for discrete action space """
@@ -77,11 +75,12 @@ class DiscreteMLPPolicyValue(Parametric):
         self.pi = torch.nn.Linear(self.n_hidden, self.n_action)
         self.value = torch.nn.Linear(self.n_hidden, 1)
 
-    def forward(self, state):
+    def forward(self, *states):
+        _, state = states
         h = F.relu(self.affine(state.unsqueeze(0)))
         act = Categorical(F.softmax(self.pi(h), dim=-1))
         v = self.value(h)
-        return ActionDistribution(act), v
+        return None, ActionDistribution(act), v
 
 class DiscreteRNNPolicy(Parametric):
     """ Recurrent policy for discrete action space """
@@ -99,16 +98,14 @@ class DiscreteRNNPolicy(Parametric):
         self.n_hidden = n_hidden
 
         # Layer definitions
-        self.cell, self.h = torch.nn.GRUCell(self.n_state, self.n_hidden), None
+        self.cell = torch.nn.GRUCell(self.n_state, self.n_hidden)
         self.pi = torch.nn.Linear(self.n_hidden, self.n_action)
     
-    def forward(self, state):
-        self.h = self.cell(state.unsqueeze(0), self.h)
-        act = Categorical(F.softmax(self.pi(self.h), dim=-1))
-        return ActionDistribution(act), None
-
-    def reset(self):
-        self.h = None
+    def forward(self, *states):
+        recur_state, state = states
+        recur_state = self.cell(state.unsqueeze(0), recur_state)
+        act = Categorical(F.softmax(self.pi(recur_state), dim=-1))
+        return recur_state.detach(), ActionDistribution(act), None
 
 class DiscreteRNNPolicyValue(Parametric):
     """ Recurrent (policy + value) for discrete action space """
@@ -130,11 +127,9 @@ class DiscreteRNNPolicyValue(Parametric):
         self.pi = torch.nn.Linear(self.n_hidden, self.n_action)
         self.V = torch.nn.Linear(self.n_hidden, 1)
     
-    def forward(self, state):
-        self.h = self.cell(state.unsqueeze(0), self.h)
-        act = Categorical(F.softmax(self.pi(self.h), dim=-1))
-        v = self.V(self.h)
-        return ActionDistribution(act), v
-
-    def reset(self):
-        self.h = None
+    def forward(self, *states):
+        recur_state, state = states
+        recur_state = self.cell(state.unsqueeze(0), recur_state)
+        act = Categorical(F.softmax(self.pi(recur_state), dim=-1))
+        v = self.V(recur_state)
+        return recur_state.detach(), ActionDistribution(act), v
