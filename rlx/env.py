@@ -1,5 +1,6 @@
 import gym
 import abc
+import numpy as np
 
 class Environment(object):
     """
@@ -50,6 +51,30 @@ class CartPolev0(Environment):
     def render(self, **kwargs):
         self._gymenv.render(**kwargs)
 
+class IncompleteCartPolev0(Environment):
+    
+    def __init__(self):
+        # The original 'CartPole-v0' environment from gym
+        self._gymenv = gym.make('CartPole-v0')
+
+        low, high = self._gymenv.observation_space.low, self._gymenv.observation_space.high
+        self.observation_space = gym.spaces.Box(low[:-1], high[:-1], dtype=np.float32)
+        self.action_spaces = (self._gymenv.action_space,)
+
+    def reset(self, global_state=None):
+        return self._gymenv.reset()[:-1]
+
+    def step(self, *actions):
+        assert len(actions) == 1, 'CartPole-v0 has only one action component'
+        next_state, rew, done, H = self._gymenv.step(*tuple(a.item() for a in actions))
+        return next_state[:-1], rew, done, H
+
+    def close(self):
+        self._gymenv.close()
+
+    def render(self, **kwargs):
+        self._gymenv.render(**kwargs)
+
 class CartPolev1(Environment):
     
     def __init__(self):
@@ -65,6 +90,30 @@ class CartPolev1(Environment):
     def step(self, *actions):
         assert len(actions) == 1, 'CartPole-v0 has only one action component'
         return self._gymenv.step(*tuple(a.item() for a in actions))
+
+    def close(self):
+        self._gymenv.close()
+
+    def render(self, **kwargs):
+        self._gymenv.render(**kwargs)
+
+class IncompleteCartPolev1(Environment):
+    
+    def __init__(self):
+        # The original 'CartPole-v1' environment from gym
+        self._gymenv = gym.make('CartPole-v1')
+
+        low, high = self._gymenv.observation_space.low, self._gymenv.observation_space.high
+        self.observation_space = gym.spaces.Box(low[:-1], high[:-1], dtype=np.float32)
+        self.action_spaces = (self._gymenv.action_space,)
+
+    def reset(self, global_state=None):
+        return self._gymenv.reset()[:-1]
+
+    def step(self, *actions):
+        assert len(actions) == 1, 'CartPole-v0 has only one action component'
+        next_state, rew, done, H = self._gymenv.step(*tuple(a.item() for a in actions))
+        return next_state[:-1], rew, done, H
 
     def close(self):
         self._gymenv.close()

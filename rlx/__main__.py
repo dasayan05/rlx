@@ -7,7 +7,10 @@ from rlx.policy import (DiscreteMLPPolicyValue,
                         DiscreteRNNPolicyValue,
                         DiscreteMLPPolicy,
                         DiscreteRNNPolicy)
-from rlx.env import (CartPolev0, CartPolev1)
+from rlx.env import (CartPolev0,
+                     CartPolev1,
+                     IncompleteCartPolev0,
+                     IncompleteCartPolev1)
 
 PGAlgos = {
     'rf': REINFORCE,
@@ -18,7 +21,9 @@ PGAlgos = {
 
 GYMEnvs = {
     'CartPole-v0': CartPolev0,
-    'CartPole-v1': CartPolev1
+    'CartPole-v1': CartPolev1,
+    'IncompleteCartPole-v0': IncompleteCartPolev0,
+    'IncompleteCartPole-v1': IncompleteCartPolev1
 }
 
 def main( args ):
@@ -92,7 +97,7 @@ if __name__ == '__main__':
     parser.add_argument('--ppo_clip', type=float, required=False, default=0.2, help='PPO clipping parameter (usually 0.2)')
     parser.add_argument('--max_episode', type=int, required=False, default=1000, help='Maximum no. of episodes')
     parser.add_argument('--horizon', type=int, required=False, default=500, help='Maximum no. of timesteps')
-    parser.add_argument('--env', type=str, required=True, choices=['CartPole-v0', 'CartPole-v1'], help='Gym environment name (string)')
+    parser.add_argument('--env', type=str, required=True, choices=['CartPole-v0', 'CartPole-v1', 'IncompleteCartPole-v0'], help='Gym environment name (string)')
 
     args = parser.parse_args()
     main( args )
