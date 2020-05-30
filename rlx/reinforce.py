@@ -8,9 +8,7 @@ class REINFORCE(object):
         self.agent = agent # Track the agent
 
     # def train(self, *, horizon, batch_size, gamma, render = False):
-    def train(self, global_network_state = None, global_env_state = None, **kwargs):
-        horizon, batch_size, gamma, render = kwargs['horizon'], kwargs['batch_size'], kwargs['gamma'], kwargs['render']
-        
+    def train(self, global_network_state, global_env_state, *, horizon, gamma=0.99, batch_size=4, render=False, **kwargs):
         avg_length = 0
         avg_reward = 0.
         

@@ -7,10 +7,7 @@ class ActorCritic(object):
         super().__init__()
         self.agent = agent # Track the agent
 
-    def train(self, global_network_state = None, global_env_state = None, **kwargs):
-        horizon, batch_size, gamma, entropy_reg, render = kwargs['horizon'], kwargs['batch_size'], \
-                    kwargs['gamma'], kwargs['entropy_reg'], kwargs['render']
-        
+    def train(self, global_network_state, global_env_state, *, horizon, batch_size=4, gamma=0.99, entropy_reg=1e-2, render=False, **kwargs):
         avg_length = 0
         avg_reward = 0.
             
@@ -44,10 +41,7 @@ class A2C(object):
         super().__init__()
         self.agent = agent # Track the agent
 
-    def train(self, global_network_state = None, global_env_state = None, **kwargs):
-        horizon, batch_size, gamma, entropy_reg, render = kwargs['horizon'], kwargs['batch_size'], \
-                    kwargs['gamma'], kwargs['entropy_reg'], kwargs['render']
-
+    def train(self, global_network_state, global_env_state, *, horizon, batch_size=4, gamma=0.99, entropy_reg=1e-2, render=False, **kwargs):
         avg_length = 0
         avg_reward = 0.
         

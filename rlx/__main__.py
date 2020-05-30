@@ -58,7 +58,7 @@ def main( args ):
         # loop for many episodes
         for episode in range(args.max_episode):
             
-            avg_reward, avg_length = algorithm.train(**train_args)
+            avg_reward, avg_length = algorithm.train(None, None, **train_args)
 
             running_reward = 0.05 * avg_reward + (1 - 0.05) * running_reward
             if episode % args.interval == 0:

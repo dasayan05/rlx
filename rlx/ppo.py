@@ -9,10 +9,8 @@ class PPO(object):
         super().__init__()
         self.agent = agent # Track the agent
 
-    def train(self, global_network_state = None, global_env_state = None, **kwargs):
-        horizon, gamma, entropy_reg, k_epochs, clip, render = kwargs['horizon'], kwargs['gamma'], \
-                kwargs['entropy_reg'], kwargs['ppo_k'], kwargs['ppo_clip'], kwargs['render']
-
+    def train(self, global_network_state, global_env_state, *, horizon, gamma=0.99, entropy_reg=1e-2, render=False,
+                k_epochs=4, ppo_clip=0.2, **kwargs):
         base_rollout = self.agent.episode(horizon, global_network_state, global_env_state, render=(render, 0.01))[:-1]
         base_rewards, base_logprobs = base_rollout.rewards, base_rollout.logprobs
         base_returns = compute_returns(base_rewards, gamma)
@@ -29,7 +27,7 @@ class PPO(object):
             
             advantage = base_returns - values.squeeze()
             # advantage = (advantage - advantage.mean()) / advantage.std()
-            policyloss = - torch.min(ratios, torch.clamp(ratios, 1 - clip, 1 + clip)) * advantage.detach()
+            policyloss = - torch.min(ratios, torch.clamp(ratios, 1 - ppo_clip, 1 + ppo_clip)) * advantage.detach()
             valueloss = advantage.pow(2)
             entropyloss = - entropy_reg * entropy
 
