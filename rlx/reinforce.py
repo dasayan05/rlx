@@ -9,6 +9,7 @@ class REINFORCE(object):
 
     def train(self, global_network_state, global_env_state, *, horizon, gamma=0.99, batch_size=4, render=False, **kwargs):
         standardize = False if 'standardize_return' not in kwargs.keys() else kwargs['standardize_return']
+        grad_clip = kwargs['grad_clip']
 
         avg_length, avg_reward = 0., 0.
         self.agent.zero_grad()
@@ -26,6 +27,6 @@ class REINFORCE(object):
             loss /= batch_size
             loss.backward()
         
-        self.agent.step()
+        self.agent.step(grad_clip)
 
         return avg_reward, avg_length

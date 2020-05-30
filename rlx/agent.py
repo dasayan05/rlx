@@ -110,7 +110,7 @@ class PGAgent(object):
         ''' Similar to PyTorch's boilerplate 'optim.zero_grad()' '''
         self.optimizer.zero_grad()
 
-    def step(self, clip=1e-2):
+    def step(self, clip=None):
         ''' Similar to PyTorch's boilerplate 'optim.step()' '''
         
         # Optional gradient clipping

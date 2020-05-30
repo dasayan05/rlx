@@ -12,6 +12,7 @@ class PPO(object):
     def train(self, global_network_state, global_env_state, *, horizon, gamma=0.99, entropy_reg=1e-2, render=False,
                 k_epochs=4, ppo_clip=0.2, **kwargs):
         standardize = False if 'standardize_return' not in kwargs.keys() else kwargs['standardize_return']
+        grad_clip = kwargs['grad_clip']
         
         base_rollout = self.agent.episode(horizon, global_network_state, global_env_state, render=(render, 0.01))[:-1]
         base_rewards, base_logprobs = base_rollout.rewards, base_rollout.logprobs
@@ -39,6 +40,6 @@ class PPO(object):
             
             self.agent.zero_grad()
             loss.backward()
-            self.agent.step(clip=None)
+            self.agent.step(grad_clip)
 
         return avg_reward, avg_length

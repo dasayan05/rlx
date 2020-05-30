@@ -44,7 +44,8 @@ def main( args ):
         'batch_size': args.batch_size,
         'ppo_clip': args.ppo_clip,
         'render': args.render,
-        'standardize_return': True
+        'standardize_return': True,
+        'grad_clip': None if args.grad_clip == 0. else args.grad_clip
     }
     
     # logging object (TensorBoard)
@@ -97,6 +98,7 @@ if __name__ == '__main__':
     parser.add_argument('--ppo_clip', type=float, required=False, default=0.2, help='PPO clipping parameter (usually 0.2)')
     parser.add_argument('--max_episode', type=int, required=False, default=1000, help='Maximum no. of episodes')
     parser.add_argument('--horizon', type=int, required=False, default=500, help='Maximum no. of timesteps')
+    parser.add_argument('--grad_clip', type=float, required=False, default=0., help='Gradient clipping (0 means no clipping)')
     parser.add_argument('--env', type=str, required=True, choices=['CartPole-v0', 'CartPole-v1', 'IncompleteCartPole-v0'], help='Gym environment name (string)')
 
     args = parser.parse_args()
