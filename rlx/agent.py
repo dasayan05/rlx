@@ -49,7 +49,10 @@ class PGAgent(object):
 
         rollout_new = Rollout(device=self.device)
 
+        # TODO: Investigate this logic, it might be flawed
         for ((recur_state, full_state), action, reward), _, _ in rollout:
+            if recur_state is not None:
+                recur_state = recur_state.detach()
             _, action_dist, *others = self.timestep(recur_state, full_state)
             rollout_new << ((recur_state, full_state), action, reward, action_dist, *others)
 

@@ -105,7 +105,7 @@ class DiscreteRNNPolicy(Parametric):
         recur_state, state = states
         recur_state = self.cell(state.unsqueeze(0), recur_state)
         act = Categorical(F.softmax(self.pi(recur_state), dim=-1))
-        return recur_state.detach(), ActionDistribution(act), None
+        return recur_state, ActionDistribution(act), None
 
 class DiscreteRNNPolicyValue(Parametric):
     """ Recurrent (policy + value) for discrete action space """
@@ -132,4 +132,4 @@ class DiscreteRNNPolicyValue(Parametric):
         recur_state = self.cell(state.unsqueeze(0), recur_state)
         act = Categorical(F.softmax(self.pi(recur_state), dim=-1))
         v = self.V(recur_state)
-        return recur_state.detach(), ActionDistribution(act), v
+        return recur_state, ActionDistribution(act), v
