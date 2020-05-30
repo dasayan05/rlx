@@ -87,7 +87,7 @@ if __name__ == '__main__':
     parser.add_argument('--base', type=str, required=False, default='.', help='Base folder (everything is relative to this)')
     parser.add_argument('--tbdir', type=str, required=False, default='', help='folder name for TensorBoard logging (empty if no TB)')
     parser.add_argument('--tbtag', type=str, required=False, default='rltag', help='Unique identifier for experiment (for TensorBoard)')
-    parser.add_argument('--algo', type=str, required=True, choices=['rf', 'ac', 'a2c', 'ppo'], help='Which algorithm to use')
+    parser.add_argument('--algo', type=str, required=True, choices=PGAlgos.keys(), help='Which algorithm to use')
     parser.add_argument('--gamma', type=float, required=False, default=0.999, help='Discount factor')
     parser.add_argument('--render', action='store_true', help='Render environment while sampling episodes')
     parser.add_argument('--policytype', type=str, required=True, choices=['rnn', 'mlp'], help='Type of policy (MLP or RNN)')
@@ -101,7 +101,7 @@ if __name__ == '__main__':
     parser.add_argument('--grad_clip', type=float, required=False, default=0., help='Gradient clipping (0 means no clipping)')
     parser.add_argument('--standardize_return', action='store_true', help='standardize all returns/advantages')
     parser.add_argument('--lr', type=float, required=False, default=1e-4, help='Learning rate')
-    parser.add_argument('--env', type=str, required=True, choices=['CartPole-v0', 'CartPole-v1', 'IncompleteCartPole-v0'], help='Gym environment name (string)')
+    parser.add_argument('--env', type=str, required=True, choices=GYMEnvs.keys(), help='Gym environment name (string)')
 
     args = parser.parse_args()
     main( args )
