@@ -26,6 +26,13 @@ GYMEnvs = {
     'IncompleteCartPole-v1': IncompleteCartPolev1
 }
 
+MAXRewards = {
+    'CartPole-v0': 193.0,
+    'CartPole-v1': 480.0,
+    'IncompleteCartPole-v0': 197.0,
+    'IncompleteCartPole-v1': 480.0
+}
+
 def main( args ):
     from torch.utils.tensorboard import SummaryWriter
 
@@ -68,6 +75,8 @@ def main( args ):
             avg_reward, avg_length = algorithm.train(None, None, **train_args)
 
             running_reward = 0.05 * avg_reward + (1 - 0.05) * running_reward
+            if running_reward > MAXRewards[args.env]:
+                break
             if episode % args.interval == 0:
                 if tqEpisodes.disable:
                     print(f'[{episode:5d}/{args.max_episode}] Running reward: {running_reward:>4.2f}, Avg. Length: {avg_length:>3.2f}')
