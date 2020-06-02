@@ -14,7 +14,7 @@ class REINFORCE(object):
         avg_length, avg_reward = 0., 0.
         self.agent.zero_grad()
         for b in range(batch_size):
-            rollout = self.agent.episode(horizon, global_network_state, global_env_state, render=(render, 0.01))[:-1]
+            rollout = self.agent.episode(horizon, global_network_state, global_env_state, render=render)[:-1]
             rewards, logprobs = rollout.rewards, rollout.logprobs
             returns = compute_returns(rewards, gamma, standardize=standardize)
             

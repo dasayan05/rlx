@@ -58,7 +58,7 @@ class PGAgent(object):
 
         return rollout_new
 
-    def episode(self, horizon, global_network_state=None, global_env_state=None, render=(False, 0)):
+    def episode(self, horizon, global_network_state=None, global_env_state=None, render=False):
         '''
         Samples and returns an entire rollout (as 'Rollout' instance).
         Arguments:
@@ -78,11 +78,9 @@ class PGAgent(object):
         for t in range(horizon):
             full_state = torch.cat([state,] if global_network_state is None else [state, global_network_state], dim=-1)
             
-            # Rendering (with optional time delay)
-            is_render, delay = render
-            if is_render:
+            # Rendering
+            if render:
                 self.environment.render()
-                time.sleep(delay)
             
             next_recurr_state, action_dist, *others = self.timestep(recurr_state, full_state)
             action = action_dist.sample() # sample an action
@@ -97,8 +95,6 @@ class PGAgent(object):
             recurr_state = next_recurr_state # update current recurrent state
             
             if done: break
-
-        self.environment.close()
 
         # One last entry for the last state (sometimes required)
         full_state = torch.cat([state,] if global_network_state is None else [state, global_network_state], dim=-1)
