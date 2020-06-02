@@ -21,8 +21,8 @@ class ActorCritic(object):
             entropyloss = rollout.entropy
 
             # compute some metrics to track
-            avg_length = ((avg_length * b) + len(rollout)) // (b + 1)
-            avg_reward = ((avg_reward * b) + rewards.sum()) // (b + 1)
+            avg_length = ((avg_length * b) + len(rollout)) / (b + 1)
+            avg_reward = ((avg_reward * b) + rewards.sum()) / (b + 1)
 
             advantage = returns - values.squeeze()
             if standardize and advantage.numel() != 1:
@@ -61,8 +61,8 @@ class A2C(object):
             entropyloss = rollout.entropy
 
             # compute some metrics to track
-            avg_length = ((avg_length * b) + len(rollout)) // (b + 1)
-            avg_reward = ((avg_reward * b) + rewards.sum()) // (b + 1)
+            avg_length = ((avg_length * b) + len(rollout)) / (b + 1)
+            avg_reward = ((avg_reward * b) + rewards.sum()) / (b + 1)
 
             advantage = returns - values.squeeze()
             if standardize and advantage.numel() != 1:

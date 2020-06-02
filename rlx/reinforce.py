@@ -19,8 +19,8 @@ class REINFORCE(object):
             returns = compute_returns(rewards, gamma, standardize=standardize)
             
             # compute some metrics to track
-            avg_length = ((avg_length * b) + len(rollout)) // (b + 1)
-            avg_reward = ((avg_reward * b) + rewards.sum()) // (b + 1)
+            avg_length = ((avg_length * b) + len(rollout)) / (b + 1)
+            avg_reward = ((avg_reward * b) + rewards.sum()) / (b + 1)
 
             policyloss = - returns.detach() * logprobs
             loss = policyloss.sum()
