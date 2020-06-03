@@ -51,7 +51,7 @@ class DiscreteMLPPolicy(Parametric):
 
     def forward(self, *states):
         _, state = states
-        h = F.relu(self.affine(state.unsqueeze(0)))
+        h = F.relu(self.affine(state))
         act = Categorical(F.softmax(self.pi(h), dim=-1))
         return None, ActionDistribution(act), None
 
@@ -77,7 +77,7 @@ class DiscreteMLPPolicyValue(Parametric):
 
     def forward(self, *states):
         _, state = states
-        h = F.relu(self.affine(state.unsqueeze(0)))
+        h = F.relu(self.affine(state))
         act = Categorical(F.softmax(self.pi(h), dim=-1))
         v = self.value(h)
         return None, ActionDistribution(act), v
@@ -103,7 +103,7 @@ class DiscreteRNNPolicy(Parametric):
     
     def forward(self, *states):
         recur_state, state = states
-        recur_state = self.cell(state.unsqueeze(0), recur_state)
+        recur_state = self.cell(state, recur_state)
         act = Categorical(F.softmax(self.pi(recur_state), dim=-1))
         return recur_state, ActionDistribution(act), None
 
@@ -129,7 +129,7 @@ class DiscreteRNNPolicyValue(Parametric):
     
     def forward(self, *states):
         recur_state, state = states
-        recur_state = self.cell(state.unsqueeze(0), recur_state)
+        recur_state = self.cell(state, recur_state)
         act = Categorical(F.softmax(self.pi(recur_state), dim=-1))
         v = self.V(recur_state)
         return recur_state, ActionDistribution(act), v

@@ -70,6 +70,7 @@ class PGAgent(object):
         ep_reward = 0 # total reward for full episode
 
         state = self.reset(global_state=global_env_state) # prepares for a new episode
+        state = state.unsqueeze(0)
         recurr_state = global_network_state
 
         rollout = Rollout(device=self.device)
@@ -92,6 +93,7 @@ class PGAgent(object):
             rollout << ((recurr_state, full_state), action, reward, action_dist, *others) # record one experience tuple
     
             state = next_state # update current state
+            state = state.unsqueeze(0)
             recurr_state = next_recurr_state # update current recurrent state
             
             if done: break
