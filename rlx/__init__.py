@@ -5,6 +5,7 @@ from .rollout import Rollout
 from .env import Environment
 
 # The core algorithms
-from .reinforce import REINFORCE
-from .actorcritic import ActorCritic, A2C
-from .ppo import PPO
+from .algos import (REINFORCE,
+                    ActorCritic,
+                    A2C,
+                    PPO)

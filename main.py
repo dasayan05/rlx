@@ -37,12 +37,15 @@ def main( args ):
     from torch.utils.tensorboard import SummaryWriter
 
     environment = GYMEnvs[args.env]()
-    Policy = (DiscreteRNNPolicyValue if args.algo != 'rf' else DiscreteRNNPolicy) if args.policytype == 'rnn' else \
+    Network = (DiscreteRNNPolicyValue if args.algo != 'rf' else DiscreteRNNPolicy) if args.policytype == 'rnn' else \
                 (DiscreteMLPPolicyValue if args.algo != 'rf' else DiscreteMLPPolicy)
+    
+    network = Network(environment.observation_space, environment.action_spaces, n_hidden=256)
+    agent = PGAgent(environment)
+    if torch.cuda.is_available():
+        network, agent = network.cuda(), agent.cuda()
 
-    agent = PGAgent(environment, Policy, policy_kwargs={'n_hidden': 256}, device=torch.device('cuda'), lr=args.lr)
-
-    algorithm = PGAlgos[args.algo](agent)
+    algorithm = PGAlgos[args.algo](agent, network)
     train_args = {
         'horizon': args.horizon,
         'gamma': args.gamma,

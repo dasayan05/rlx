@@ -8,30 +8,29 @@ from .policy import Parametric
 class PGAgent(object):
     """ Encapsulation of an Agent """
 
-    def __init__(self, env, policy, policy_kwargs={}, device=None, lr=1e-4):
+    def __init__(self, env, device=None):
         '''
-        Constructs an Agent from and 'env' and 'policy'.
+        Constructs an Agent for the given environment. This agent is almost state-less.
         Arguments:
             env: An environment respecting the 'env.Environment' API
-            policy: A subclass of the 'policy.Parametric'
             device: Default device of operation
-            lr: Learning rate (TODO: Make a better interface for optimizers)
-            policy_kwargs: kwargs that go into 'policy' instantiation
         '''
         super().__init__()
+        assert isinstance(env, Environment), "env object must be an instance of 'env.Environment'"
 
         # Track arguments
-        assert isinstance(env, Environment), "env object must be an instance of 'env.Environment'"
         self.environment = env
-        self.device = torch.device('cpu' if torch.cuda.is_available() else 'cpu') if device is None else device
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu') if device is None else device
 
-        # The internal learnable object
-        assert issubclass(policy, Parametric), "policy must be a subclass of 'policy.Parametric'"
-        self.network = policy(self.environment.observation_space, self.environment.action_spaces, **policy_kwargs)
-        self.network = self.network.to(self.device)
+    def __call__(self, network):
+        ''' Augments an agent with a network. The agent cannot work without this. '''
+        new_agent = PGAgent(self.environment, device=self.device)
+        setattr(new_agent, 'network', network)
+        return new_agent
 
-        # Optimizer instance
-        self.optimizer = torch.optim.Adam(self.network.parameters(), lr=1e-4)
+    def cuda(self):
+        self.device = torch.device('cuda')
+        return self
 
     def reset(self, global_state=None):
         ''' Resets the environment and returns an initial state '''
@@ -106,16 +105,3 @@ class PGAgent(object):
         rollout << ((recurr_state, full_state), action, 0.0, action_dist, *others) # R = 0.0 is dummy, TODO: DO something
 
         return rollout
-
-    def zero_grad(self):
-        ''' Similar to PyTorch's boilerplate 'optim.zero_grad()' '''
-        self.optimizer.zero_grad()
-
-    def step(self, clip=None):
-        ''' Similar to PyTorch's boilerplate 'optim.step()' '''
-        
-        # Optional gradient clipping
-        if clip is not None:
-            torch.nn.utils.clip_grad_norm_(self.network.parameters(), clip)
-        
-        self.optimizer.step()

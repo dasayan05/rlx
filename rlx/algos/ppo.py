@@ -1,13 +1,10 @@
 import torch
 
-from .utils import compute_returns, compute_bootstrapped_returns
+from .pgalgo import PGAlgorithm
+from ..utils import compute_returns, compute_bootstrapped_returns
 
-class PPO(object):
+class PPO(PGAlgorithm):
     ''' Proximal Policy Optimization (PPO) with clipping. '''
-
-    def __init__(self, agent):
-        super().__init__()
-        self.agent = agent # Track the agent
 
     def train(self, global_network_state, global_env_state, *, horizon, batch_size=8, gamma=0.99, entropy_reg=1e-2, render=False,
                 k_epochs=4, ppo_clip=0.2, **kwargs):
@@ -19,7 +16,7 @@ class PPO(object):
         batch_rollouts = []
         for b in range(batch_size):
             with torch.no_grad():
-                base_rollout = self.agent.episode(horizon, global_network_state, global_env_state, render=render)[:-1]
+                base_rollout = self.agent(self.network).episode(horizon, global_network_state, global_env_state, render=render)[:-1]
             base_rewards, base_logprobs = base_rollout.rewards, base_rollout.logprobs
             base_returns = compute_returns(base_rewards, gamma)
             batch_rollouts.append((base_rollout, base_logprobs, base_returns))
@@ -29,11 +26,11 @@ class PPO(object):
             avg_reward = ((avg_reward * b) + base_rewards.sum()) / (b + 1)
 
         for _ in range(k_epochs):
-            self.agent.zero_grad()
+            self.zero_grad()
             for b in range(batch_size):
                 base_rollout, base_logprobs, base_returns = batch_rollouts[b]
 
-                rollout = self.agent.evaluate(base_rollout)
+                rollout = self.agent(self.network).evaluate(base_rollout)
                 logprobs, entropy = rollout.logprobs, rollout.entropy
                 values, = rollout.others
 
@@ -50,6 +47,6 @@ class PPO(object):
                 loss = policyloss.sum() + valueloss.sum() + entropyloss.sum()
                 loss = loss / batch_size
                 loss.backward()
-            self.agent.step(grad_clip)
+            self.step(grad_clip)
 
         return avg_reward, avg_length
