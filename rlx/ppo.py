@@ -18,7 +18,8 @@ class PPO(object):
 
         batch_rollouts = []
         for b in range(batch_size):
-            base_rollout = self.agent.episode(horizon, global_network_state, global_env_state, render=render)[:-1]
+            with torch.no_grad():
+                base_rollout = self.agent.episode(horizon, global_network_state, global_env_state, render=render)[:-1]
             base_rewards, base_logprobs = base_rollout.rewards, base_rollout.logprobs
             base_returns = compute_returns(base_rewards, gamma)
             batch_rollouts.append((base_rollout, base_logprobs, base_returns))
