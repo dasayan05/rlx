@@ -45,7 +45,8 @@ def main( args ):
     if torch.cuda.is_available():
         network, agent = network.cuda(), agent.cuda()
 
-    algorithm = PGAlgos[args.algo](agent, network, optimizer='rmsprop' if args.policytype == 'rnn' else 'adam')
+    optimizer = 'rmsprop' if args.policytype == 'rnn' else 'adam'
+    algorithm = PGAlgos[args.algo](agent, network, optimizer, {'lr': args.lr})
     train_args = {
         'horizon': args.horizon,
         'gamma': args.gamma,
