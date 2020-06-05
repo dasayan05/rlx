@@ -1,7 +1,7 @@
 import torch
 
 from .pgalgo import PGAlgorithm
-from ..utils import compute_returns, compute_bootstrapped_returns
+from .utils import compute_returns, compute_bootstrapped_returns
 
 class PPO(PGAlgorithm):
     ''' Proximal Policy Optimization (PPO) with clipping. '''

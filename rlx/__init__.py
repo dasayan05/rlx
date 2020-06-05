@@ -1,6 +1,6 @@
 # Backbone of 'rlx'
 from .agent import PGAgent
-from .policy import Parametric
+from .policy import Parametric, ActionDistribution
 from .rollout import Rollout
 from .env import Environment
 

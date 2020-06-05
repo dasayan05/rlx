@@ -1,7 +1,7 @@
 import torch
 
 from .pgalgo import PGAlgorithm
-from ..utils import compute_returns
+from .utils import compute_returns
 
 class REINFORCE(PGAlgorithm):
     ''' REINFORCE algorithm. '''
