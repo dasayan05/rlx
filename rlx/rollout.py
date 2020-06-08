@@ -1,5 +1,7 @@
 import torch
 
+from .utils import compute_returns
+
 class Rollout(object):
     """ Contains and manages one single rollout/episode """
 
@@ -35,6 +37,12 @@ class Rollout(object):
     def rewards(self):
         ''' Returns the sequence of rewards (Tensorized) '''
         return torch.tensor(self._rewards, device=self.device)
+
+    def mc_returns(self, gamma=1.0, standardize=False):
+        ''' Computes Monte-Carlo returns for each timesteps (and optionally returns) '''
+        if not hasattr(self, '_returns'):
+            self._returns = compute_returns(self.rewards, gamma=gamma, standardize=standardize)
+        return self._returns
 
     @property
     def logprobs(self):

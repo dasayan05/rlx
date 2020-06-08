@@ -1,7 +1,6 @@
 import torch
 
 from .pgalgo import PGAlgorithm
-from .utils import compute_returns, compute_bootstrapped_returns
 
 class PPO(PGAlgorithm):
     ''' Proximal Policy Optimization (PPO) with clipping. '''
@@ -18,7 +17,7 @@ class PPO(PGAlgorithm):
             with torch.no_grad():
                 base_rollout = self.agent(self.network).episode(horizon, global_network_state, global_env_state, render=render)[:-1]
             base_rewards, base_logprobs = base_rollout.rewards, base_rollout.logprobs
-            base_returns = compute_returns(base_rewards, gamma)
+            base_returns = base_rollout.mc_returns(gamma, standardize=standardize)
             batch_rollouts.append((base_rollout, base_logprobs, base_returns))
 
             # compute some metrics to track

@@ -1,5 +1,13 @@
 from .pgalgo import PGAlgorithm
-from .utils import compute_returns, compute_bootstrapped_returns
+
+def compute_bootstrapped_returns(rewards, end_v, gamma = 1.0, standardize = False):
+    returns = []
+    v = end_v
+    for t in reversed(range(len(rewards))):
+        returns.insert(0, rewards[t] + gamma * v)
+        v = returns[0]
+    returns = torch.cat(returns, dim=-1)
+    return (returns - returns.mean()) / returns.std() if standardize else returns
 
 class ActorCritic(PGAlgorithm):
     ''' REINFORCE with Value-baseline. '''
@@ -13,7 +21,7 @@ class ActorCritic(PGAlgorithm):
         for b in range(batch_size):
             rollout = self.agent(self.network).episode(horizon, global_network_state, global_env_state, render=render)[:-1]
             rewards, logprobs = rollout.rewards, rollout.logprobs
-            returns = compute_returns(rewards, gamma)
+            returns = rollout.mc_returns(gamma, standardize=standardize)
             values, = rollout.others
             entropyloss = rollout.entropy
 
