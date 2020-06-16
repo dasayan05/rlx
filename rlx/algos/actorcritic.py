@@ -64,12 +64,16 @@ class A2C(PGAlgorithm):
         for b in range(batch_size):
             with torch.set_grad_enabled(self.reccurrent):
                 rollout = self.agent(self.network).episode(horizon, global_network_state, global_env_state,
-                    dry=not self.reccurrent, render=render)
+                    dry=False, render=render)
             end_v, = rollout[-1].others
-            rollout = rollout[:-1]
+            if not self.reccurrent:
+                # TODO: This hack is really ugly. Need to fix the interface
+                rollout = rollout.dry()[:-1]
+            else:
+                rollout = rollout[:-1]
             rewards = rollout.rewards
             rollout.returns = A2C.compute_bootstrapped_returns(rewards, end_v, gamma)
-            
+
             # compute some metrics to track
             avg_length = ((avg_length * b) + len(rollout)) / (b + 1)
             avg_reward = ((avg_reward * b) + rewards.sum()) / (b + 1)
@@ -77,7 +81,7 @@ class A2C(PGAlgorithm):
             if not self.reccurrent:
                 rollout = rollout.vectorize()
                 rollout = self.agent(self.network).evaluate(rollout)
-
+            
             returns, logprobs = rollout.returns, rollout.logprobs
             values, = rollout.others
             entropyloss = rollout.entropy

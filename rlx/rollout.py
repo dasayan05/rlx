@@ -25,7 +25,6 @@ class Rollout(object):
         self.device = torch.device('cpu' if torch.cuda.is_available() else 'cpu') if device is None else device
 
     def __getitem__(self, index):
-        # breakpoint()
         rollout_ = Rollout(device=self.device, ctor=(
                     self._states[index],
                     self._actions[index],
@@ -35,6 +34,16 @@ class Rollout(object):
                     # The below ones are empty if it is dry rollout
                     self._action_dist[index] if len(self._action_dist) != 0 else [],
                     self._others[index] if len(self._others) != 0 else []
+                ))
+
+        return rollout_
+
+    def dry(self):
+        rollout_ = Rollout(device=self.device, ctor=(
+                    self._states, self._actions, self._rewards,
+                    self._returns,
+                    [], # 'action_dist' is empty in case of dry rollout
+                    [], # 'others' is empty in case of dry rollout
                 ))
 
         return rollout_
