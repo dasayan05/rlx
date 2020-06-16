@@ -1,33 +1,34 @@
-from .pgalgo import PGAlgorithm
+import torch
 
-def compute_bootstrapped_returns(rewards, end_v, gamma = 1.0, standardize = False):
-    returns = []
-    v = end_v
-    for t in reversed(range(len(rewards))):
-        returns.insert(0, rewards[t] + gamma * v)
-        v = returns[0]
-    returns = torch.cat(returns, dim=-1)
-    return (returns - returns.mean()) / returns.std() if standardize else returns
+from .pgalgo import PGAlgorithm
 
 class ActorCritic(PGAlgorithm):
     ''' REINFORCE with Value-baseline. '''
 
     def train(self, global_network_state, global_env_state, *, horizon, batch_size=4, gamma=0.99, entropy_reg=1e-2, render=False, **kwargs):
         standardize = False if 'standardize_return' not in kwargs.keys() else kwargs['standardize_return']
-        grad_clip = kwargs['grad_clip']
+        grad_clip = None if 'grad_clip' not in kwargs.keys() else kwargs['grad_clip']
         
         avg_length, avg_reward = 0., 0.
+
         self.zero_grad()
         for b in range(batch_size):
-            rollout = self.agent(self.network).episode(horizon, global_network_state, global_env_state, render=render)[:-1]
-            rewards, logprobs = rollout.rewards, rollout.logprobs
-            returns = rollout.mc_returns(gamma, standardize=standardize)
-            values, = rollout.others
-            entropyloss = rollout.entropy
+            with torch.set_grad_enabled(self.reccurrent):
+                rollout = self.agent(self.network).episode(horizon, global_network_state, global_env_state,
+                    dry=not self.reccurrent, render=render)[:-1]
+                rollout.mc_returns()
 
             # compute some metrics to track
             avg_length = ((avg_length * b) + len(rollout)) / (b + 1)
-            avg_reward = ((avg_reward * b) + rewards.sum()) / (b + 1)
+            avg_reward = ((avg_reward * b) + rollout.rewards.sum()) / (b + 1)
+
+            if not self.reccurrent:
+                rollout = rollout.vectorize()
+                rollout = self.agent(self.network).evaluate(rollout)
+
+            returns, logprobs = rollout.returns, rollout.logprobs
+            values, = rollout.others
+            entropyloss = rollout.entropy
 
             advantage = returns - values.squeeze()
             if standardize and advantage.numel() != 1:
@@ -46,6 +47,14 @@ class ActorCritic(PGAlgorithm):
 class A2C(PGAlgorithm):
     ''' Advantage Actor Critic (A2C). '''
 
+    def compute_bootstrapped_returns(rewards, end_v, gamma = 1.0):
+        returns = []
+        v = end_v
+        for t in reversed(range(rewards.shape[-1])):
+            returns.insert(0, rewards[:,t] + gamma * v)
+            v = returns[0]
+        return torch.stack(returns, dim=-1)
+
     def train(self, global_network_state, global_env_state, *, horizon, batch_size=4, gamma=0.99, entropy_reg=1e-2, render=False, **kwargs):
         standardize = False if 'standardize_return' not in kwargs.keys() else kwargs['standardize_return']
         grad_clip = kwargs['grad_clip']
@@ -53,17 +62,25 @@ class A2C(PGAlgorithm):
         avg_length, avg_reward = 0., 0.
         self.zero_grad()
         for b in range(batch_size):
-            rollout = self.agent(self.network).episode(horizon, global_network_state, global_env_state, render=render)
+            with torch.set_grad_enabled(self.reccurrent):
+                rollout = self.agent(self.network).episode(horizon, global_network_state, global_env_state,
+                    dry=not self.reccurrent, render=render)
             end_v, = rollout[-1].others
             rollout = rollout[:-1]
-            rewards, logprobs = rollout.rewards, rollout.logprobs
-            returns = compute_bootstrapped_returns(rewards, end_v, gamma)
-            values, = rollout.others
-            entropyloss = rollout.entropy
-
+            rewards = rollout.rewards
+            rollout.returns = A2C.compute_bootstrapped_returns(rewards, end_v, gamma)
+            
             # compute some metrics to track
             avg_length = ((avg_length * b) + len(rollout)) / (b + 1)
             avg_reward = ((avg_reward * b) + rewards.sum()) / (b + 1)
+
+            if not self.reccurrent:
+                rollout = rollout.vectorize()
+                rollout = self.agent(self.network).evaluate(rollout)
+
+            returns, logprobs = rollout.returns, rollout.logprobs
+            values, = rollout.others
+            entropyloss = rollout.entropy
 
             advantage = returns - values.squeeze()
             if standardize and advantage.numel() != 1:

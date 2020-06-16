@@ -46,7 +46,7 @@ def main( args ):
         network, agent = network.cuda(), agent.cuda()
 
     optimizer = 'rmsprop' if args.policytype == 'rnn' else 'adam'
-    algorithm = PGAlgos[args.algo](agent, network, optimizer, {'lr': args.lr})
+    algorithm = PGAlgos[args.algo](agent, network, args.policytype == 'rnn', optimizer, {'lr': args.lr})
     train_args = {
         'horizon': args.horizon,
         'gamma': args.gamma,
@@ -61,7 +61,7 @@ def main( args ):
     
     # logging object (TensorBoard)
     if len(args.tbdir) != 0:
-        logger = SummaryWriter(os.path.join(args.base, f'{args.tbdir}/{args.tbtag}'))
+        logger = SummaryWriter(os.path.join(args.base, f'{args.tbdir}/{args.tbtag}'), flush_secs=10)
 
     # TQDM Formatting
     TQDMBar = '{l_bar}{bar}| {n_fmt}/{total_fmt} [{elapsed}<{remaining}, ' + \
@@ -75,8 +75,11 @@ def main( args ):
 
         # loop for many episodes
         for episode in range(args.max_episode):
-            
-            avg_reward, avg_length = algorithm.train(None, None, **train_args)
+            if args.policytype == 'rnn':
+                global_network_state = torch.zeros(1, network.n_hidden, device=agent.device)
+            else:
+                global_network_state = None
+            avg_reward, avg_length = algorithm.train(global_network_state, None, **train_args)
 
             running_reward = 0.05 * avg_reward + (1 - 0.05) * running_reward
             if running_reward > MAXRewards[args.env]:

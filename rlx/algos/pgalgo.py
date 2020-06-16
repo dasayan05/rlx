@@ -5,13 +5,14 @@ from ..policy import Parametric
 class PGAlgorithm(object):
     ''' Generic base class for Policy Gradient algorithms. '''
 
-    def __init__(self, agent, network, optimizer='adam', optim_kwargs={ }):
+    def __init__(self, agent, network, reccurrent=False, optimizer='adam', optim_kwargs={ }):
         super().__init__()
         assert isinstance(network, Parametric), "network must be an instance of 'policy.Parametric'"
         assert optimizer in ['adam', 'rmsprop'], "optimizer must be a either 'adam' or 'rmsprop'"
 
         self.agent = agent # Track the agent
         self.network = network
+        self.reccurrent = reccurrent
 
         # optimizer instance
         self.OptimClass = optim.Adam if optimizer == 'adam' else optim.RMSprop

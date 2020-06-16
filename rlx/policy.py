@@ -21,7 +21,7 @@ class ActionDistribution(object):
 
     def sample(self):
         ''' Sample an action (set of several constituent actions) '''
-        return tuple(d.sample() for d in self.distribs)
+        return tuple(d.sample().unsqueeze(0) for d in self.distribs)
 
     def log_prob(self, *samples):
         '''
@@ -31,11 +31,20 @@ class ActionDistribution(object):
             samples: A tuple of actions
         '''
         assert len(samples) == self.n_dist, "Number of constituent distributions is different than number of samples"
-        return sum([d.log_prob(s) for d, s in zip(self.distribs, samples)])
+        logprobs = []
+        for d, s in zip(self.distribs, samples):
+            # TODO: Hopefully okay. Need recheck
+            lp = d.log_prob(s.view(d.batch_shape))
+            if len(lp.shape) == 1:
+                lp = lp.unsqueeze(-1)
+            else:
+                lp = torch.prod(lp, dim=-1, keepdim=True)
+            logprobs.append(lp)
+        return sum(logprobs)
 
     def entropy(self):
         ''' Computes entropy of (each component) the ActionDistribution '''
-        return sum([d.entropy() for d in self.distribs])
+        return sum([d.entropy().unsqueeze(0) for d in self.distribs])
 
 class Parametric(nn.Module):
     """
