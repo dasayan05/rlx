@@ -16,15 +16,16 @@ class PPO(PGAlgorithm):
         for b in range(batch_size):
             with torch.set_grad_enabled(False):
                 base_rollout = self.agent(self.network).episode(horizon, global_network_state, global_env_state,
-                    dry=True, render=render)[:-1]
+                    dry=not self.reccurrent, render=render)[:-1]
                 base_rollout.mc_returns(gamma)
 
                 # compute some metrics to track
                 avg_length = ((avg_length * b) + len(base_rollout)) / (b + 1)
                 avg_reward = ((avg_reward * b) + base_rollout.rewards.sum()) / (b + 1)
 
-                base_rollout = base_rollout.vectorize(recurrence=self.reccurrent)
-                base_rollout = self.agent(self.network).evaluate(base_rollout)
+                if not self.reccurrent:
+                    base_rollout = base_rollout.vectorize(recurrence=self.reccurrent)
+                    base_rollout = self.agent(self.network).evaluate(base_rollout)
                 base_returns, base_logprobs = base_rollout.returns, base_rollout.logprobs
                 batch_rollouts.append((base_rollout, base_logprobs, base_returns))
 
@@ -33,7 +34,7 @@ class PPO(PGAlgorithm):
             for b in range(batch_size):
                 base_rollout, base_logprobs, base_returns = batch_rollouts[b]
 
-                rollout = self.agent(self.network).evaluate(base_rollout)
+                rollout = self.agent(self.network).evaluate(base_rollout, recurrence=False)
                 logprobs, entropy = rollout.logprobs, rollout.entropy
                 values, = rollout.others
 
