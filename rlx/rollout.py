@@ -70,7 +70,7 @@ class Rollout(object):
     def returns(self, custom_returns):
         ''' Set a custom return in case simple Monte-Carlo is not enough '''
         assert custom_returns.shape[-1] == len(self), 'custom returns should have the same length as the rollout'
-        self._returns = [q.unsqueeze(-1) for q in torch.unbind(custom_returns, -1)]
+        self._returns = [q.unsqueeze(-1) for q in torch.unbind(custom_returns.detach(), -1)]
 
     @property
     def logprobs(self):
