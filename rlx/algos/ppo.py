@@ -48,7 +48,7 @@ class PPO(PGAlgorithm):
                 valueloss = advantage.pow(2)
                 entropyloss = - entropy_reg * entropy
 
-                loss = policyloss.sum() + valueloss.sum() + entropyloss.sum()
+                loss = policyloss.mean() + valueloss.mean() + entropyloss.mean()
                 loss = loss / batch_size
                 loss.backward()
             self.step(grad_clip)

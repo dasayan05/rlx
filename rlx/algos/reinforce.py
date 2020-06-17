@@ -31,7 +31,7 @@ class REINFORCE(PGAlgorithm):
                 returns = (returns - returns.mean()) / returns.std()
 
             policyloss = - returns * logprobs
-            loss = policyloss.sum()
+            loss = policyloss.mean()
             loss /= batch_size
             loss.backward()
         

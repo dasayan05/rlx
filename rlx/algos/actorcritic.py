@@ -36,7 +36,7 @@ class ActorCritic(PGAlgorithm):
 
             policyloss = - advantage.detach() * logprobs
             valueloss = advantage.pow(2)
-            loss = policyloss.sum() + valueloss.sum() - entropy_reg * entropyloss.sum()
+            loss = policyloss.mean() + valueloss.mean() - entropy_reg * entropyloss.mean()
             loss /= batch_size
             loss.backward()
         
@@ -92,7 +92,7 @@ class A2C(PGAlgorithm):
 
             policyloss = - advantage.detach() * logprobs
             valueloss = advantage.pow(2)
-            loss = policyloss.sum() + valueloss.sum() - entropy_reg * entropyloss.sum()
+            loss = policyloss.mean() + valueloss.mean() - entropy_reg * entropyloss.mean()
             loss /= batch_size
             loss.backward()
         
