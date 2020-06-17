@@ -30,7 +30,7 @@ class ActorCritic(PGAlgorithm):
             values, = rollout.others
             entropyloss = rollout.entropy
 
-            advantage = returns - values.squeeze()
+            advantage = returns - values
             if standardize and advantage.numel() != 1:
                 advantage = (advantage - advantage.mean()) / advantage.std()
 
@@ -86,7 +86,7 @@ class A2C(PGAlgorithm):
             values, = rollout.others
             entropyloss = rollout.entropy
 
-            advantage = returns - values.squeeze()
+            advantage = returns - values
             if standardize and advantage.numel() != 1:
                 advantage = (advantage - advantage.mean()) / advantage.std()
 

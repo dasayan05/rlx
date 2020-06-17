@@ -39,8 +39,8 @@ class PPO(PGAlgorithm):
                 values, = rollout.others
 
                 ratios = (logprobs - base_logprobs.detach()).exp()
-                
-                advantage = base_returns - values.squeeze()
+
+                advantage = base_returns - values
                 if standardize and advantage.numel() != 1:
                     advantage = (advantage - advantage.mean()) / advantage.std()
 
