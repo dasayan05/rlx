@@ -5,7 +5,8 @@ from .pgalgo import PGAlgorithm
 class ActorCritic(PGAlgorithm):
     ''' REINFORCE with Value-baseline. '''
 
-    def train(self, global_network_state, global_env_state, *, horizon, batch_size=4, gamma=0.99, entropy_reg=1e-2, render=False, **kwargs):
+    def train(self, global_network_state, global_env_state, *, horizon, batch_size=4, gamma=0.99, entropy_reg=1e-2,
+            value_reg=0.5, render=False, **kwargs):
         standardize = False if 'standardize_return' not in kwargs.keys() else kwargs['standardize_return']
         grad_clip = None if 'grad_clip' not in kwargs.keys() else kwargs['grad_clip']
         
@@ -36,7 +37,7 @@ class ActorCritic(PGAlgorithm):
 
             policyloss = - advantage.detach() * logprobs
             valueloss = advantage.pow(2)
-            loss = policyloss.mean() + valueloss.mean() - entropy_reg * entropyloss.mean()
+            loss = policyloss.mean() + value_reg * valueloss.mean() - entropy_reg * entropyloss.mean()
             loss /= batch_size
             loss.backward()
         
@@ -55,7 +56,8 @@ class A2C(PGAlgorithm):
             v = returns[0]
         return torch.stack(returns, dim=-1)
 
-    def train(self, global_network_state, global_env_state, *, horizon, batch_size=4, gamma=0.99, entropy_reg=1e-2, render=False, **kwargs):
+    def train(self, global_network_state, global_env_state, *, horizon, batch_size=4, gamma=0.99, entropy_reg=1e-2,
+            value_reg=0.5, render=False, **kwargs):
         standardize = False if 'standardize_return' not in kwargs.keys() else kwargs['standardize_return']
         grad_clip = None if 'grad_clip' not in kwargs.keys() else kwargs['grad_clip']
 
@@ -92,7 +94,7 @@ class A2C(PGAlgorithm):
 
             policyloss = - advantage.detach() * logprobs
             valueloss = advantage.pow(2)
-            loss = policyloss.mean() + valueloss.mean() - entropy_reg * entropyloss.mean()
+            loss = policyloss.mean() + value_reg * valueloss.mean() - entropy_reg * entropyloss.mean()
             loss /= batch_size
             loss.backward()
         

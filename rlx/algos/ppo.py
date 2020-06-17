@@ -6,7 +6,7 @@ class PPO(PGAlgorithm):
     ''' Proximal Policy Optimization (PPO) with clipping. '''
 
     def train(self, global_network_state, global_env_state, *, horizon, batch_size=8, gamma=0.99, entropy_reg=1e-2, render=False,
-                k_epochs=4, ppo_clip=0.2, **kwargs):
+                k_epochs=4, ppo_clip=0.2, value_reg=0.5, **kwargs):
         standardize = False if 'standardize_return' not in kwargs.keys() else kwargs['standardize_return']
         grad_clip = None if 'grad_clip' not in kwargs.keys() else kwargs['grad_clip']
         
@@ -48,7 +48,7 @@ class PPO(PGAlgorithm):
                 valueloss = advantage.pow(2)
                 entropyloss = - entropy_reg * entropy
 
-                loss = policyloss.mean() + valueloss.mean() + entropyloss.mean()
+                loss = policyloss.mean() + value_reg * valueloss.mean() + entropyloss.mean()
                 loss = loss / batch_size
                 loss.backward()
             self.step(grad_clip)
