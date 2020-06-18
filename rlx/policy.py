@@ -34,11 +34,13 @@ class ActionDistribution(object):
         logprobs = []
         for d, s in zip(self.distribs, samples):
             # TODO: Hopefully okay. Need recheck
-            lp = d.log_prob(s.view(d.batch_shape))
+            assert len(s.shape) >= 2, 'samples must have atleast one event dim and one batch dim'
+            lp = d.log_prob(s.squeeze(-1))
             if len(lp.shape) == 1:
                 lp = lp.unsqueeze(-1)
-            else:
-                lp = torch.prod(lp, dim=-1, keepdim=True)
+            
+            if len(d.event_shape) != 0:
+                lp = torch.sum(lp, dim=-1, keepdim=True)
             logprobs.append(lp)
         return sum(logprobs)
 
