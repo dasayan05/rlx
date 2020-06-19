@@ -24,7 +24,7 @@ class PPO(PGAlgorithm):
                 avg_reward = ((avg_reward * b) + base_rollout.rewards.sum()) / (b + 1)
 
                 if not self.reccurrent:
-                    base_rollout = base_rollout.vectorize(recurrence=self.reccurrent)
+                    base_rollout = base_rollout.vectorize()
                     base_rollout = self.agent(self.network).evaluate(base_rollout)
                 base_returns, base_logprobs = base_rollout.returns, base_rollout.logprobs
                 batch_rollouts.append((base_rollout, base_logprobs, base_returns))

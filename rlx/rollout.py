@@ -24,6 +24,9 @@ class Rollout(object):
         # If 'device' not provided, go ahead based on availability
         self.device = torch.device('cpu' if torch.cuda.is_available() else 'cpu') if device is None else device
 
+        # Flag indicating presence of recurrence
+        self.recurrent = False
+
     def __getitem__(self, index):
         rollout_ = Rollout(device=self.device, ctor=(
                     self._states[index],
@@ -75,11 +78,13 @@ class Rollout(object):
     @property
     def logprobs(self):
         ''' Returns the sequence of log-probabilities, i.e. log pi(a|s))) (Tensorized) '''
+        assert len(self._action_dist) != 0, 'Rollout must NOT be dry in order to compute logprobs'
         return torch.cat([ d.log_prob(*a) for a, d in zip(self._actions, self._action_dist) ], dim=-1)
     
     @property
     def others(self):
         ''' Extra info per time step (e.g., value) '''
+        assert len(self._others) != 0, 'Rollout must NOT be dry in order to access any part of computation graph'
         n_others = len(self._others[0])
         if n_others != 0:
             return tuple(torch.cat([others[index] for others in self._others], dim=-1)
@@ -87,6 +92,7 @@ class Rollout(object):
     @property
     def entropy(self):
         ''' Returns the sequence of entropy at every timestep '''
+        assert len(self._action_dist) != 0, 'Rollout must NOT be dry in order to compute entropy'
         return torch.cat([d.entropy() for d in self._action_dist], dim=-1)
 
     def __len__(self):
@@ -114,6 +120,7 @@ class Rollout(object):
         ''' Inserts a new experience tuple into the rollout '''
         state, action, reward, action_dist, *others = rhs
 
+        self.recurrent = state[0] is not None
         # (s, a, r) is mandetory
         self._states.append( state )
         self._actions.append( action )
@@ -124,7 +131,7 @@ class Rollout(object):
             self._action_dist.append( action_dist )
             self._others.append( tuple(others) )
 
-    def vectorize(self, recurrence=False):
+    def vectorize(self):
         ''' Vectorize the rollout; mainly for efficiency purpose '''
         
         # TODO: Maybe we can handle this generally
@@ -133,19 +140,18 @@ class Rollout(object):
         n_actions = len(self._actions[0]) # no. of action components
 
         vec_states = torch.cat([q for _, q in self._states], dim=0) # first dimension must be batch
-        if recurrence:
+        if self.recurrent:
             vec_recur_states = torch.cat([q for q, _ in self._states], dim=0)
         else:
             vec_recur_states = None
         vec_actions = tuple(torch.cat([q[ia] for q in self._actions], dim=0) for ia in range(n_actions))
         vec_rewards = self.rewards.view(-1, 1) # TODO: Do we really need this ?
-        vec_returns = self.returns.view(-1, 1)
-
+        
         rollout_ = Rollout(device=self.device, ctor=(
                 [(vec_recur_states, vec_states),],
                 [vec_actions,],
                 [vec_rewards,],
-                [vec_returns,],
+                [self.returns.view(-1, 1),] if len(self._returns) != 0 else [],
                 [], # It's dry rollout, so not needed
                 [], # It's dry rollout, so not needed
             )
