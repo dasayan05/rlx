@@ -8,4 +8,5 @@ from .env import Environment
 from .algos import (REINFORCE,
                     ActorCritic,
                     A2C,
-                    PPO)
+                    PPO,
+                    OffPolicyActorCritic)

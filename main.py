@@ -2,7 +2,7 @@ import os
 import gym, torch
 from tqdm import tqdm
 
-from rlx import PGAgent, REINFORCE, ActorCritic, PPO, A2C
+from rlx import PGAgent, REINFORCE, ActorCritic, PPO, A2C, OffPolicyActorCritic
 from rlx.policy import (DiscreteMLPPolicyValue,
                         DiscreteRNNPolicyValue,
                         DiscreteMLPPolicy,
@@ -16,7 +16,8 @@ PGAlgos = {
     'rf': REINFORCE,
     'ac': ActorCritic,
     'a2c': A2C,
-    'ppo': PPO
+    'ppo': PPO,
+    'offpac': OffPolicyActorCritic
 }
 
 GYMEnvs = {
@@ -41,9 +42,13 @@ def main( args ):
                 (DiscreteMLPPolicyValue if args.algo != 'rf' else DiscreteMLPPolicy)
     
     network = Network(environment.observation_space, environment.action_spaces, n_hidden=256)
+    if args.algo == 'offpac':
+        behavior = Network(environment.observation_space, environment.action_spaces, n_hidden=256)
     agent = PGAgent(environment)
     if torch.cuda.is_available():
         network, agent = network.cuda(), agent.cuda()
+        if args.algo == 'offpac':
+            behavior = behavior.cuda()
 
     optimizer = 'rmsprop' if args.policytype == 'rnn' else 'adam'
     algorithm = PGAlgos[args.algo](agent, network, args.policytype == 'rnn', optimizer, {'lr': args.lr})
@@ -56,7 +61,10 @@ def main( args ):
         'ppo_clip': args.ppo_clip,
         'render': args.render,
         'standardize_return': args.standardize_return,
-        'grad_clip': None if args.grad_clip == 0. else args.grad_clip
+        'grad_clip': None if args.grad_clip == 0. else args.grad_clip,
+        'behavior': behavior if args.algo == 'offpac' else None,
+        'buffer_size': args.rbsize,
+        'max_buffer_usage': args.max_rbusage
     }
     
     # logging object (TensorBoard)
@@ -114,6 +122,8 @@ if __name__ == '__main__':
     parser.add_argument('--ppo_clip', type=float, required=False, default=0.2, help='PPO clipping parameter (usually 0.2)')
     parser.add_argument('--max_episode', type=int, required=False, default=1000, help='Maximum no. of episodes')
     parser.add_argument('--horizon', type=int, required=False, default=500, help='Maximum no. of timesteps')
+    parser.add_argument('--rbsize', type=int, required=False, default=100, help='Size of replay buffer (if needed)')
+    parser.add_argument('--max_rbusage', type=int, required=False, default=5, help='Maximum usage of a replay buffer')
     parser.add_argument('--grad_clip', type=float, required=False, default=0., help='Gradient clipping (0 means no clipping)')
     parser.add_argument('--standardize_return', action='store_true', help='standardize all returns/advantages')
     parser.add_argument('--lr', type=float, required=False, default=1e-4, help='Learning rate')
