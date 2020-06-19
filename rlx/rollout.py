@@ -26,6 +26,7 @@ class Rollout(object):
 
         # Flag indicating presence of recurrence
         self.recurrent = False
+        self.vectorized = False
 
     def __getitem__(self, index):
         rollout_ = Rollout(device=self.device, ctor=(
@@ -133,6 +134,9 @@ class Rollout(object):
 
     def vectorize(self):
         ''' Vectorize the rollout; mainly for efficiency purpose '''
+
+        if self.vectorized: # vectorization can be done only once
+            return self
         
         # TODO: Maybe we can handle this generally
         assert len(self._action_dist) == 0, 'Only dry rollouts can be vectorized'
@@ -146,7 +150,7 @@ class Rollout(object):
             vec_recur_states = None
         vec_actions = tuple(torch.cat([q[ia] for q in self._actions], dim=0) for ia in range(n_actions))
         vec_rewards = self.rewards.view(-1, 1) # TODO: Do we really need this ?
-        
+
         rollout_ = Rollout(device=self.device, ctor=(
                 [(vec_recur_states, vec_states),],
                 [vec_actions,],
@@ -156,4 +160,6 @@ class Rollout(object):
                 [], # It's dry rollout, so not needed
             )
         )
+        rollout_.vectorized = True
+
         return rollout_
