@@ -4,9 +4,7 @@ from tqdm import tqdm
 
 from rlx import PGAgent, REINFORCE, ActorCritic, PPO, A2C, OffPolicyActorCritic
 from rlx.policy import (DiscreteMLPPolicyValue,
-                        DiscreteRNNPolicyValue,
-                        DiscreteMLPPolicy,
-                        DiscreteRNNPolicy)
+                        DiscreteRNNPolicyValue)
 from rlx.env import (CartPolev0,
                      CartPolev1,
                      IncompleteCartPolev0,
@@ -38,8 +36,7 @@ def main( args ):
     from torch.utils.tensorboard import SummaryWriter
 
     environment = GYMEnvs[args.env]()
-    Network = (DiscreteRNNPolicyValue if args.algo != 'rf' else DiscreteRNNPolicy) if args.policytype == 'rnn' else \
-                (DiscreteMLPPolicyValue if args.algo != 'rf' else DiscreteMLPPolicy)
+    Network = DiscreteRNNPolicyValue if args.policytype == 'rnn' else DiscreteMLPPolicyValue
     
     network = Network(environment.observation_space, environment.action_spaces, n_hidden=256)
     if args.algo == 'offpac':
