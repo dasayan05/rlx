@@ -53,7 +53,8 @@ class PGAgent(object):
             rollout_new << ((recur_state, full_state), action, reward, action_dist, *others)
 
         # Just transfer the returns
-        rollout_new.returns = rollout.returns
+        if len(rollout._returns) != 0:
+            rollout_new.returns = rollout.returns
 
         return rollout_new
 
@@ -67,7 +68,8 @@ class PGAgent(object):
             rollout_new << ((recur_state, full_state), action, reward, action_dist, *others)
 
         # Just transfer the returns
-        rollout_new.returns = rollout.returns
+        if len(rollout._returns) != 0:
+            rollout_new.returns = rollout.returns
 
         return rollout_new
 
