@@ -51,10 +51,10 @@ class A2C(PGAlgorithm):
     def compute_bootstrapped_returns(rewards, end_v, gamma = 1.0):
         returns = []
         v = end_v
-        for t in reversed(range(rewards.shape[-1])):
-            returns.insert(0, rewards[:,t] + gamma * v)
+        for t in reversed(range(rewards.shape[0])):
+            returns.insert(0, rewards[t,:] + gamma * v)
             v = returns[0]
-        return torch.stack(returns, dim=-1)
+        return torch.stack(returns, dim=0)
 
     def train(self, global_network_state, global_env_state, *, horizon, batch_size=4, gamma=0.99, entropy_reg=1e-2,
             value_reg=0.5, render=False, **kwargs):

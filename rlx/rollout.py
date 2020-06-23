@@ -55,7 +55,7 @@ class Rollout(object):
     @property
     def rewards(self):
         ''' Returns the sequence of rewards (Tensorized) '''
-        return torch.cat(self._rewards, dim=-1)
+        return torch.cat(self._rewards, dim=0)
 
     def mc_returns(self, gamma=1.0):
         ''' Computes Monte-Carlo returns for each timesteps (and optionally returns) '''
@@ -63,24 +63,24 @@ class Rollout(object):
         for r in reversed(self._rewards[:-1]):
             returns.insert(0, (r + gamma * returns[0]))
         self._returns = returns
-        
+                
         return self.returns # this is the '.returns' property
 
     @property
     def returns(self):
-        return torch.cat(self._returns, dim=-1)
+        return torch.cat(self._returns, dim=0)
 
     @returns.setter
     def returns(self, custom_returns):
         ''' Set a custom return in case simple Monte-Carlo is not enough '''
         assert custom_returns.shape == self.rewards.shape, 'custom returns should be compatible with the rollout'
-        self._returns = [q.unsqueeze(-1) for q in torch.unbind(custom_returns.detach(), -1)]
+        self._returns = [q.unsqueeze(0) for q in torch.unbind(custom_returns.detach(), 0)]
 
     @property
     def logprobs(self):
         ''' Returns the sequence of log-probabilities, i.e. log pi(a|s))) (Tensorized) '''
         assert len(self._action_dist) != 0, 'Rollout must NOT be dry in order to compute logprobs'
-        return torch.cat([ d.log_prob(*a) for a, d in zip(self._actions, self._action_dist) ], dim=-1)
+        return torch.cat([ d.log_prob(*a) for a, d in zip(self._actions, self._action_dist) ], dim=0)
     
     @property
     def others(self):
@@ -88,13 +88,19 @@ class Rollout(object):
         assert len(self._others) != 0, 'Rollout must NOT be dry in order to access any part of computation graph'
         n_others = len(self._others[0])
         if n_others != 0:
-            return tuple(torch.cat([others[index] for others in self._others], dim=-1)
+            return tuple(torch.cat([others[index] for others in self._others], dim=0)
                                             for index in range(n_others))
+    @property
+    def actions(self):
+        ''' Actions taken '''
+        n_actions = len(self._actions[0])
+        return tuple(torch.cat([q[ia] for q in self._actions], dim=0) for ia in range(n_actions))
+    
     @property
     def entropy(self):
         ''' Returns the sequence of entropy at every timestep '''
         assert len(self._action_dist) != 0, 'Rollout must NOT be dry in order to compute entropy'
-        return torch.cat([d.entropy() for d in self._action_dist], dim=-1)
+        return torch.cat([d.entropy() for d in self._action_dist], dim=0)
 
     def __len__(self):
         ''' Returns the length of the rollout '''
