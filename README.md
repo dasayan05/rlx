@@ -1,6 +1,6 @@
 # rlx: A modular Deep RL library for research
 
-#### ** [Under active development] **
+#### [Under active development]
 
 ## Introcution
 
