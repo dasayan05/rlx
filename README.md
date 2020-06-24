@@ -2,15 +2,15 @@
 
 ## Introcution
 
-`rlx` is a Deep RL library built for *educational and research* purpose. Few months back, I was looking for a good library to get started with Deep Reinforement Learning (Deep RL). After a bit of searching, I found out that majority codebases are geared more towards reproduction of state-of-the-art algorithms on very specific tasks (e.g. Atari games etc.). Also, I noticed that different researchers/developers have their own standalone implementation of different RL algorithms with very different abstractions that make it difficult to adopt any one of them.
+`rlx` is a Deep RL library written on top of PyTorch & built for *educational and research* purpose. Majority of the libraries/codebases for Deep RL are geared more towards reproduction of state-of-the-art algorithms on very specific tasks (e.g. Atari games etc.), but `rlx` is NOT. It is supposed to be more expressive and modular. Rather than making RL algorithms as black-boxes, `rlx` adopts an API that tries to expose more granular operation to the users which makes writing new algorithms easier. It is also useful for implementing task specific engineering into a known algorithm (as we know RL is very sensitive to small implementation engineerings).
 
-I decided to start writing one myself on top of [PyTorch](https://pytorch.org/). `rlx` is supposed to
+Concisely, `rlx` is supposed to
+
 1. Be generic (i.e., can be adopted for any task at hand)
 2. Have modular lower-level components exposed to users
-3. Be easy to write new algorithms with the components it provides
-4. Have implementation of few most used algorithms as baselines
+3. Be easy to implement new algorithms
 
-Here's a basic example of PPO (with clipping) implementation with `rlx`
+For the sake of completeness, it also provides few popular algorithms as baseline (more to be added soon). Here's a basic example of PPO (with clipping) implementation with `rlx`
 
 ```
 base_rollout = agent(policy).episode(horizon) # sample an episode as a 'Rollout' object
@@ -33,11 +33,11 @@ for _ in range(k_epochs):
     agent.step()
 ```
 
-This is all you have to write to get PPO running. Its extremely easy to make manual engineering into the algorithms.
+This is all you have to write to get PPO running.
 
 ## Design and API
 
-User needs to provide a parametric function that defines the computation at *each time-step* and follows a specific signature (i.e., `rlx.Parametric`). `rlx` will take care of the rest e.g., tie them up to form full rollouts, preserving recurrence etc.
+User needs to provide a parametric function that defines the computation at *each time-step* and follows a specific signature (i.e., `rlx.Parametric`). `rlx` will take care of the rest e.g., tie them up to form full rollouts, preserving recurrence (it works seamlessly with recurrent policies) etc.
 
 ```
 class PolicyValueModule(rlx.Parametric):
@@ -81,7 +81,8 @@ rollout = agent(other_policy).evaluate(dry_rollout)
 This API has another benefit. One can sample an episode from a policy in dry-mode, then `.vectorize()` it and re-evaluate it against the same policy. This bring in computational benefits.
 
 ```
-dry_rollout = agent(policy).episode(..., dry=Try)
+with torch.no_grad():
+	dry_rollout = agent(policy).episode(..., dry=Try)
 dry_rollout_vec = dry_rollout.vectorize() # internally creates a batch dimension for efficient processing
 rollout = agent(policy).evalue(dry_rollout_vec)
 ```
@@ -126,7 +127,7 @@ The "Incomplete"-prefixed environments are examples of POMDP. Their state repres
 
 ![](extra/exp.png)
 
-- A little modified `SlimeVolleyGym-v0` environment by David Ha [https://github.com/hardmaru/slimevolleygym](https://github.com/hardmaru/slimevolleygym). An MLP agent trained with PPO learns to play volleyball by self-play experiences, provided at `examples/slime.py`.
+- A little modified (simplified) `SlimeVolleyGym-v0` environment by David Ha [https://github.com/hardmaru/slimevolleygym](https://github.com/hardmaru/slimevolleygym). An MLP agent trained with PPO learns to play volleyball by self-play experiences, provided at `examples/slime.py`.
 
 ![](extra/volley.gif)
 
@@ -134,7 +135,7 @@ The "Incomplete"-prefixed environments are examples of POMDP. Their state repres
 
 ## Plans
 
-Currently `rlx` has following algorithms, but it is under active development.
+Currently `rlx` has following algorithms, but it is **under active development**.
 
 1. Vanilla REINFORCE
 2. REINFORCE with Value-baseline
@@ -150,7 +151,4 @@ Currently `rlx` has following algorithms, but it is under active development.
 
 #### Contributions
 
-You are more than welcome to contribute anything:
-1. New features
-2. Efficiency improvements
-3. More experiments
+You are more than welcome to contribute anything.
