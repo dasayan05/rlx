@@ -2,14 +2,13 @@ import copy
 import torch
 
 from .pgalgo import PGAlgorithm
+from ..replay import Replay
 
 class OffPolicyActorCritic(PGAlgorithm):
     ''' Off-Policy REINFORCE with Value-baseline. '''
 
-    def populate_replay_buffer(self, behavior, horizon, global_network_state, global_env_state, n_episodes, render=False):
-        self.buffer = []
-        self.buffer_usage, self.i_batch = 0, 0
-
+    def populate_replay_buffer(self, buffer, behavior, horizon, global_network_state, global_env_state,
+            n_episodes, render=False):
         avg_length, avg_reward = 0., 0.
         with torch.set_grad_enabled(False):
             for b in range(n_episodes):
@@ -27,19 +26,22 @@ class OffPolicyActorCritic(PGAlgorithm):
                 if not self.reccurrent:
                     bh_logprobs = bh_logprobs.view(-1, 1)
                     bh_rollout = bh_rollout.vectorize()
-                self.buffer.append((bh_rollout, bh_logprobs))
+                buffer.populate_buffer((bh_rollout, bh_logprobs))
         return avg_reward, avg_length
 
     def train(self, global_network_state, global_env_state, *, behavior, horizon, batch_size=4, gamma=0.99, entropy_reg=1e-2,
-            value_reg=0.5, buffer_size=100, max_buffer_usage=5, render=False, **kwargs):
+            value_reg=0.5, buffer_size=100, render=False, **kwargs):
         standardize = False if 'standardize_return' not in kwargs.keys() else kwargs['standardize_return']
         grad_clip = None if 'grad_clip' not in kwargs.keys() else kwargs['grad_clip']
 
-        if not hasattr(self, 'buffer'):
-            self.avg_reward, self.avg_length = self.populate_replay_buffer(behavior, horizon,
-                global_network_state, global_env_state, buffer_size, render)
+        if not hasattr(self, 'replay'):
+            self.replay = Replay(buffer_size)
+            self.update_count = 0
+        
+        self.avg_reward, self.avg_length = self.populate_replay_buffer(self.replay, behavior, horizon,
+                global_network_state, global_env_state, batch_size, render)
 
-        batch = self.buffer[self.i_batch:min(self.i_batch + batch_size, buffer_size)]
+        batch = self.replay.get_batch(batch_size)
 
         self.zero_grad()
         for b, (bh_roll, bh_lp) in enumerate(batch):
@@ -62,14 +64,9 @@ class OffPolicyActorCritic(PGAlgorithm):
             loss /= batch_size
             loss.backward()
         self.step(grad_clip)
+        self.update_count += 1
 
-        self.i_batch += batch_size
-        if self.i_batch >= buffer_size:
-            self.i_batch = 0
-            self.buffer_usage += 1
-            if self.buffer_usage == max_buffer_usage:
-                behavior.load_state_dict(self.network.state_dict())
-                self.avg_reward, self.avg_length = self.populate_replay_buffer(behavior, horizon,
-                global_network_state, global_env_state, buffer_size, render)
+        if self.update_count % 10 == 0:
+            behavior.load_state_dict(self.network.state_dict())
 
         return self.avg_reward, self.avg_length
