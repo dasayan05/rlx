@@ -134,8 +134,9 @@ class Rollout(object):
         self._rewards.append( reward )
 
         # action distribution and others are optional
-        if (action_dist is not None) and (others is not None):
+        if action_dist is not None:
             self._action_dist.append( action_dist )
+        if (others is not None) and (len(others) != 0):
             self._others.append( tuple(others) )
 
     def vectorize(self):
