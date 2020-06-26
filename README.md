@@ -105,6 +105,24 @@ behaviour_rollout = agent(behavior_policy).episode(...)
 behaviour_logprobs = behaviour_rollout.logprobs # record them for computing importance ratio afterwards
 ```
 
+---
+
+`Rollout` has a nice API which is useful for writing customized algorithm or implementation tricks. We can
+
+```
+# shuffle rollouts ..
+rollout.shuffle()
+
+# .. index/slice them
+rollout[:-1] # remove the end-state
+rollout[:100] # recurrent rollouts can be too long (RNNs have long-term memory problems)
+
+# .. or even concat them
+(rollout1 + rollout2).vectorize()
+```
+
+
+
 NOTE: I will write more docs if get time. Follow the algorithm implementations at `rlx/algos/*` for more API usage.
 
 ## Installation and usage
