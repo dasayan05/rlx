@@ -1,4 +1,5 @@
 import torch
+import random, sys
 
 class Rollout(object):
     """ Contains and manages one single rollout/episode """
@@ -27,6 +28,7 @@ class Rollout(object):
         # Flag indicating presence of recurrence
         self.recurrent = False
         self.vectorized = False
+        self.dry = True
 
     def __getitem__(self, index):
         rollout_ = Rollout(device=self.device, ctor=(
@@ -39,16 +41,22 @@ class Rollout(object):
                     self._action_dist[index] if len(self._action_dist) != 0 else [],
                     self._others[index] if len(self._others) != 0 else []
                 ))
+        rollout_.recurrent = self.is_recurrent()
+        rollout_.vectorized = self.is_vectorized()
+        rollout_.dry = self.is_dry()
 
         return rollout_
 
-    def dry(self):
+    def make_dry(self):
         rollout_ = Rollout(device=self.device, ctor=(
                     self._states, self._actions, self._rewards,
                     self._returns,
                     [], # 'action_dist' is empty in case of dry rollout
                     [], # 'others' is empty in case of dry rollout
                 ))
+        rollout_.recurrent = self.is_recurrent()
+        rollout_.vectorized = self.is_vectorized()
+        rollout_.dry = True
 
         return rollout_
 
@@ -79,7 +87,7 @@ class Rollout(object):
     @property
     def logprobs(self):
         ''' Returns the sequence of log-probabilities, i.e. log pi(a|s))) (Tensorized) '''
-        assert len(self._action_dist) != 0, 'Rollout must NOT be dry in order to compute logprobs'
+        assert not self.is_dry(), 'Rollout must NOT be dry in order to compute logprobs'
         return torch.cat([ d.log_prob(*a) for a, d in zip(self._actions, self._action_dist) ], dim=0)
     
     @property
@@ -99,7 +107,7 @@ class Rollout(object):
     @property
     def entropy(self):
         ''' Returns the sequence of entropy at every timestep '''
-        assert len(self._action_dist) != 0, 'Rollout must NOT be dry in order to compute entropy'
+        assert not self.is_dry(), 'Rollout must NOT be dry in order to compute entropy'
         return torch.cat([d.entropy() for d in self._action_dist], dim=0)
 
     def __len__(self):
@@ -136,22 +144,70 @@ class Rollout(object):
         # action distribution and others are optional
         if action_dist is not None:
             self._action_dist.append( action_dist )
+            self.dry = False
         if (others is not None) and (len(others) != 0):
             self._others.append( tuple(others) )
+
+    def shuffle(self, seed=None):
+        if self.is_recurrent():
+            return self
+
+        seed = random.randint(0, sys.maxsize) if seed is None else int(seed)
+
+        random.seed(seed); random.shuffle(self._states)
+        random.seed(seed); random.shuffle(self._actions)
+        random.seed(seed); random.shuffle(self._rewards)
+        random.seed(seed); random.shuffle(self._returns)
+        random.seed(seed); random.shuffle(self._action_dist)
+        random.seed(seed); random.shuffle(self._others)
+
+        return self
+
+    def is_recurrent(self):
+        return self.recurrent
+
+    def is_vectorized(self):
+        return self.vectorized
+
+    def is_dry(self):
+        return self.dry
+
+    def __add__(self, rhs_rollout):
+        assert (not self.is_recurrent()) or (not rhs_rollout.is_recurrent()), \
+                "Recurrent rollouts can't be concatenated"
+        assert self.is_dry() == rhs_rollout.is_dry(), "Both rollouts must have same 'self.dry'"
+        
+        rollout_ = Rollout(device=self.device,
+            ctor=(
+                self._states + rhs_rollout._states,
+                self._actions + rhs_rollout._actions,
+                self._rewards + rhs_rollout._rewards,
+                self._returns + rhs_rollout._returns,
+                self._action_dist + rhs_rollout._action_dist,
+                self._others + rhs_rollout._others
+            )
+        )
+
+        rollout_.recurrent = False
+        rollout_.dry = self.is_dry()
+        if self.is_vectorized() or rhs_rollout.is_vectorized():
+            rollout_ = rollout_.vectorize()
+
+        return rollout_
 
     def vectorize(self):
         ''' Vectorize the rollout; mainly for efficiency purpose '''
 
-        if self.vectorized: # vectorization can be done only once
+        if self.is_vectorized(): # vectorization can be done only once
             return self
         
         # TODO: Maybe we can handle this generally
-        assert len(self._action_dist) == 0, 'Only dry rollouts can be vectorized'
+        assert self.is_dry(), 'Only dry rollouts can be vectorized'
         
         n_actions = len(self._actions[0]) # no. of action components
 
         vec_states = torch.cat([q for _, q in self._states], dim=0) # first dimension must be batch
-        if self.recurrent:
+        if self.is_recurrent():
             vec_recur_states = torch.cat([q for q, _ in self._states], dim=0)
         else:
             vec_recur_states = None
@@ -168,5 +224,7 @@ class Rollout(object):
             )
         )
         rollout_.vectorized = True
+        rollout_.dry = True
+        rollout_.recurrent = self.is_recurrent()
 
         return rollout_

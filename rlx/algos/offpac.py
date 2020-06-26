@@ -21,7 +21,7 @@ class OffPolicyActorCritic(PGAlgorithm):
 
                 bh_rollout.mc_returns()
                 bh_logprobs = bh_rollout.logprobs
-                bh_rollout = bh_rollout.dry()
+                bh_rollout = bh_rollout.make_dry()
 
                 if not self.reccurrent:
                     bh_logprobs = bh_logprobs.view(-1, 1)

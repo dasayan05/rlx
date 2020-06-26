@@ -70,7 +70,7 @@ class A2C(PGAlgorithm):
             end_v, = rollout[-1].others
             if not self.reccurrent:
                 # TODO: This hack is really ugly. Need to fix the interface
-                rollout = rollout.dry()[:-1]
+                rollout = rollout.make_dry()[:-1]
             else:
                 rollout = rollout[:-1]
             rewards = rollout.rewards
